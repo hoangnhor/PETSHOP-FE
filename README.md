@@ -1,70 +1,199 @@
-# Getting Started with Create React App
+# Petshop.vn Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Frontend cho website thương mại điện tử bán sản phẩm thú cưng. Ứng dụng được xây bằng React, kết nối REST API từ backend Node.js/Express.
 
-## Available Scripts
+## Tính năng chính
 
-In the project directory, you can run:
+- Trang chủ với banner, danh mục nổi bật và danh sách sản phẩm.
+- Trang danh sách sản phẩm, tìm kiếm theo từ khóa, lọc theo danh mục, sắp xếp giá.
+- Trang chi tiết sản phẩm, chọn số lượng, thêm vào giỏ hàng, mua ngay.
+- Giỏ hàng và đặt hàng.
+- Đăng ký, đăng nhập, đăng xuất, tự làm mới token.
+- Trang hồ sơ người dùng.
+- Trang quản trị cho admin: quản lý sản phẩm, người dùng, đơn hàng, danh mục.
+- Giao diện responsive, dùng Ant Design và styled-components.
 
-### `npm start`
+## Công nghệ
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React 18
+- React Router DOM
+- Redux Toolkit, React Redux
+- TanStack React Query
+- Ant Design
+- Axios
+- Styled Components
+- React Slick
+- Create React App
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Yêu cầu môi trường
 
-### `npm test`
+- Node.js 18 trở lên
+- npm
+- Backend chạy tại `http://localhost:3030`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Cài đặt
 
-### `npm run build`
+```bash
+cd FE
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Cấu hình môi trường
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Tạo file `.env` trong thư mục `FE`:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```env
+REACT_APP_API_URL=http://localhost:3030/api
+```
 
-### `npm run eject`
+Ghi chú:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- `REACT_APP_API_URL` là URL API backend.
+- Nếu không khai báo biến này, frontend mặc định gọi `http://localhost:3030/api`.
+- File `package.json` cũng có proxy về `http://localhost:3030` cho môi trường dev.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Chạy dự án
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Mở trình duyệt:
 
-## Learn More
+```text
+http://localhost:3000
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Build production
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build
+```
 
-### Code Splitting
+Kết quả build nằm trong thư mục:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```text
+FE/build
+```
 
-### Analyzing the Bundle Size
+## Kiểm thử
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+npm test
+```
 
-### Making a Progressive Web App
+## Cấu trúc thư mục
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```text
+FE/
+├── public/
+├── src/
+│   ├── assets/                 # Hình ảnh, tài nguyên tĩnh
+│   ├── components/             # Component dùng chung
+│   ├── DrawerComponent/        # Drawer dùng trong admin/form
+│   ├── hooks/                  # Custom hooks
+│   ├── pages/                  # Các trang chính
+│   ├── redux/                  # Redux store và slice
+│   ├── routes/                 # Khai báo route
+│   ├── services/               # Hàm gọi API
+│   ├── App.js
+│   └── index.js
+├── .env
+├── package.json
+└── README.md
+```
 
-### Advanced Configuration
+## Routes chính
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+| Đường dẫn | Chức năng |
+|---|---|
+| `/` | Trang chủ |
+| `/products` | Danh sách sản phẩm |
+| `/products?keyword=...` | Tìm kiếm sản phẩm |
+| `/products?type=...` | Lọc sản phẩm theo danh mục |
+| `/product-detail/:id` | Chi tiết sản phẩm |
+| `/order` | Giỏ hàng/đặt hàng, yêu cầu đăng nhập |
+| `/profile` | Hồ sơ người dùng, yêu cầu đăng nhập |
+| `/sign-in` | Đăng nhập |
+| `/sign-up` | Đăng ký |
+| `/services` | Dịch vụ |
+| `/contact` | Liên hệ |
+| `/admin` | Quản trị, yêu cầu tài khoản admin |
 
-### Deployment
+## Kết nối API
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Các file service nằm trong:
 
-### `npm run build` fails to minify
+```text
+src/services/
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Service chính:
+
+- `UserServices.js`: đăng nhập, đăng ký, refresh token, hồ sơ, quản lý user.
+- `ProductServices.js`: danh sách, chi tiết, tạo, sửa, xóa, tìm kiếm sản phẩm.
+- `TypeServices.js`: danh sách, tạo, sửa, xóa danh mục.
+- `BillServices.js`: tạo đơn, xem đơn, cập nhật trạng thái, hủy đơn.
+
+Token đăng nhập được lưu trong `localStorage` với key:
+
+```text
+access_token
+```
+
+Giỏ hàng được lưu local với key:
+
+```text
+cartItems
+```
+
+## Quy trình chạy fullstack
+
+Mở 2 terminal riêng:
+
+Terminal backend:
+
+```bash
+cd BE
+npm run dev
+```
+
+Terminal frontend:
+
+```bash
+cd FE
+npm start
+```
+
+Sau đó truy cập:
+
+```text
+Frontend: http://localhost:3000
+Backend:  http://localhost:3030
+```
+
+## Lỗi thường gặp
+
+### Frontend không gọi được API
+
+Kiểm tra backend đã chạy chưa:
+
+```text
+http://localhost:3030
+```
+
+Kiểm tra `.env`:
+
+```env
+REACT_APP_API_URL=http://localhost:3030/api
+```
+
+### Không đăng nhập được hoặc bị văng phiên
+
+- Kiểm tra backend có đủ `ACCESS_TOKEN` và `REFRESH_TOKEN`.
+- Xóa token cũ trong trình duyệt rồi đăng nhập lại.
+- Kiểm tra CORS backend có cho phép `http://localhost:3000`.
+
+### Port 3000 đã được dùng
+
+CRA sẽ hỏi chạy port khác. Có thể chọn `Y`, hoặc tắt tiến trình đang dùng port 3000.
