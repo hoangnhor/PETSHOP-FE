@@ -5,12 +5,22 @@ Frontend cho website thương mại điện tử bán sản phẩm thú cưng. �
 ## Tính năng chính
 
 - Trang chủ với banner, danh mục nổi bật và danh sách sản phẩm.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/4d2b7cac-d52f-4621-a08f-cbf0d5c963a9" />
 - Trang danh sách sản phẩm, tìm kiếm theo từ khóa, lọc theo danh mục, sắp xếp giá.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/c70b9cf4-2b2b-4c36-a0e5-a6252a8233d6" />
 - Trang chi tiết sản phẩm, chọn số lượng, thêm vào giỏ hàng, mua ngay.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/e8c0672e-847b-4050-a5a8-9a9837d5c4cf" />
 - Giỏ hàng và đặt hàng.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/f6dc0753-f5cc-465b-953e-c8c26cf0398f" />
 - Đăng ký, đăng nhập, đăng xuất, tự làm mới token.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/40fbb959-8501-47b4-8544-7cb38f2504a8" />
+  <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/b2bb94cb-1345-46b9-b9dc-4df2ba964272" />
 - Trang hồ sơ người dùng.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/8015eba5-d784-409c-aea7-6550a81a7c28" />
 - Trang quản trị cho admin: quản lý sản phẩm, người dùng, đơn hàng, danh mục.
+- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/ec0903cf-42fd-4695-95d1-42ec36b8c4d5" />
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/c82d4ded-6e7c-4371-8e84-1ea965744cab" />
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/ad58e5d0-03cb-4d8d-b6e4-a3c5a0678f1f" />
 - Giao diện responsive, dùng Ant Design và styled-components.
 
 ## Công nghệ
