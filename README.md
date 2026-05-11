@@ -1,76 +1,69 @@
-# petshop Frontend (ReactJS)
+# 🚀 petshop FE — React E-commerce Experience Layer
 
-Frontend cho hệ thống thương mại điện tử `petshop`, tập trung vào trải nghiệm mua hàng online cho khách hàng và trang quản trị cho admin.
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![React Router](https://img.shields.io/badge/React_Router-6-CA4245?logo=reactrouter&logoColor=white)
+![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-2.x-764ABC?logo=redux&logoColor=white)
+![TanStack Query](https://img.shields.io/badge/TanStack_Query-5.x-FF4154?logo=reactquery&logoColor=white)
+![Ant Design](https://img.shields.io/badge/Ant_Design-5.x-1677FF?logo=antdesign&logoColor=white)
+![Axios](https://img.shields.io/badge/Axios-1.x-5A29E4?logo=axios&logoColor=white)
+![Styled Components](https://img.shields.io/badge/Styled_Components-6.x-DB7093?logo=styledcomponents&logoColor=white)
 
-## 1) Thông tin dự án
+> “petshop FE” là lớp trải nghiệm khách hàng và vận hành admin cho hệ thống e-commerce thú cưng, tập trung vào tốc độ phản hồi UI, tính ổn định phiên đăng nhập và khả năng mở rộng product flows.
 
-- Project: `petshop`
-- Domain nghiệp vụ: E-commerce sản phẩm thú cưng
-- Người dùng mục tiêu:
-  - Khách hàng mua sản phẩm online
-  - Admin quản lý sản phẩm, danh mục, đơn hàng, người dùng
+- 🌐 Live Demo: `<YOUR_FE_LIVE_URL>`
+- 🔗 Frontend Repo: `<YOUR_FE_REPO_URL>`
+- 🔗 Backend Repo: `<YOUR_BE_REPO_URL>`
 
-## 2) Vai trò thực hiện
+---
 
-- Vai trò: **Fullstack Developer** (trong repo này là phần **Frontend**)
-- Thực hiện:
-  - Thiết kế luồng UI/UX mua hàng và quản trị
-  - Kết nối API, xử lý state, auth flow, error/loading state
-  - Tối ưu behavior production (query cache/retry, chuẩn hóa API URL)
+## 🔥 Điểm sáng Kỹ thuật (Technical Highlights)
 
-## 3) Tính năng chính
+1. **Session Resilience với Access/Refresh Token Lifecycle**
+- Tự động làm mới access token qua interceptor.
+- Duy trì trải nghiệm đăng nhập mượt, giảm logout đột ngột khi token hết hạn.
 
-- Authentication UI:
-  - Đăng ký, đăng nhập, đăng xuất
-  - Tự refresh access token khi token hết hạn
-- Trang khách hàng:
-  - Trang chủ, danh sách sản phẩm, tìm kiếm/lọc
-  - Chi tiết sản phẩm, related products
-  - Giỏ hàng, checkout, lịch sử đơn hàng
-  - Wishlist
-- Trang người dùng:
-  - Quản lý hồ sơ
-- Trang quản trị:
-  - Quản lý User / Product / Order
-- UX kỹ thuật:
-  - Loading/error state rõ ràng
-  - React Query cache + retry strategy cho production
-  - Chuẩn hóa `REACT_APP_API_URL` để tránh lỗi sai URL khi deploy
+2. **Data Fetching Strategy theo chuẩn production**
+- Dùng TanStack Query với cache/retry/stale time hợp lý.
+- Giảm over-fetching và tránh spam request khi tab refocus.
 
-## 4) Công nghệ và thư viện
+3. **Global State tách biệt domain rõ ràng**
+- Redux Toolkit quản lý user/session state.
+- UI state + server state được phân vai (Redux vs Query) để giữ kiến trúc sạch.
 
-- Core:
-  - `react`, `react-dom`, `react-router-dom`
-- State/Data:
-  - `redux`, `@reduxjs/toolkit`, `react-redux`
-  - `@tanstack/react-query`, `@tanstack/react-query-devtools`
-- UI:
-  - `antd`
-  - `styled-components`
-  - `react-slick`, `slick-carousel`
-- Networking/Auth:
-  - `axios`
-  - `jwt-decode`
-- Khác:
-  - `dotenv`, `web-vitals`
-- Test/CRA tooling:
-  - `react-scripts`
-  - `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`
+4. **API Config hardening cho đa môi trường deploy**
+- Chuẩn hóa `REACT_APP_API_URL`, chống lỗi double-slash và thiếu `/api`.
+- Giảm rủi ro lỗi cấu hình khi promote từ local -> staging -> production.
 
-## 5) Cấu trúc thư mục chính
+---
+
+## 📦 Cấu trúc State / Luồng dữ liệu
+
+| Layer | Công cụ | Trách nhiệm | Output |
+|---|---|---|---|
+| Global App State | Redux Toolkit | User profile, auth metadata, shared app flags | UI nhất quán giữa route |
+| Server State | TanStack Query | Fetch/cache/retry dữ liệu API (product/type/bill/user) | Data hydration nhanh, ít refetch |
+| API Client | Axios + interceptor | Gắn token, refresh token flow, chuẩn hóa lỗi | Request ổn định, error contract rõ |
+| View Layer | React + AntD + Styled Components | Render nghiệp vụ theo role/user journey | UX mua hàng + admin dashboard |
+
+---
+
+## 🔄 Luồng nghiệp vụ cốt lõi (Core Flow)
 
 ```text
-FE/src
-├── components/          # UI components dùng lại
-├── pages/               # Các page chính
-├── services/            # API clients
-├── redux/               # Redux store/slices
-├── routes/              # Route config
-├── App.js               # App shell + protected routes
-└── index.js             # Entry + QueryClient/Provider
+User opens app
+  -> App bootstrap reads access_token
+     -> Token valid? fetch profile
+     -> Token expired? refresh-token -> retry profile
+        -> Route guard checks isPrivate / isAdmin
+           -> Render page
+              -> Query fetches data (cache/retry policy)
+                 -> User action (add cart / checkout / admin ops)
+                    -> API mutation -> cache update / refetch
 ```
 
-## 6) Cài đặt và chạy local
+---
+
+## 🚀 Cài đặt & Khởi chạy (Local Development)
 
 ```bash
 cd FE
@@ -78,44 +71,29 @@ npm install
 npm start
 ```
 
-Frontend mặc định chạy tại: `http://localhost:3000`
-
-## 7) Environment variables
-
-Tạo file `.env` trong thư mục `FE`:
-
+`.env`
 ```env
-REACT_APP_API_URL=http://localhost:3030/api
+REACT_APP_API_URL=
 ```
 
-Lưu ý:
-- Ở production có thể dùng:
-  - `REACT_APP_API_URL=https://petshopbe.onrender.com/api`
-
-## 8) Build production
-
+Build:
 ```bash
 npm run build
 ```
 
-## 9) Danh sách route chính
+---
 
-- `/`
-- `/products`
-- `/product-detail/:id`
-- `/cart`
-- `/checkout`
-- `/order-history`
-- `/wishlist`
-- `/profile`
-- `/admin`
+## 📂 Cấu trúc mã nguồn (Folder Structure)
 
-## 10) Deploy
-
-- Frontend production: Vercel
-- URL: `https://petshop-fe.vercel.app`
-
-## 11) Liên kết liên quan
-
-- Backend repo: `https://github.com/hoangnhor/petshopBE`
-- Frontend repo: `https://github.com/hoangnhor/petshopFE`
+```text
+src/
+├── assets/                      # Ảnh và static assets cho UI/branding
+├── components/                  # Reusable components (header, footer, cards, admin blocks...)
+├── hooks/                       # Custom hooks tái sử dụng logic UI/data
+├── pages/                       # Route-level pages theo user journey và admin journey
+├── redux/                       # Store + slices cho global state
+├── routes/                      # Route config + private/admin gating metadata
+├── services/                    # API clients, auth/session helpers, endpoint config
+├── App.js                       # App shell, protected route control, token bootstrap
+└── index.js                     # Entry point, providers (Redux/Query), runtime config
+```
