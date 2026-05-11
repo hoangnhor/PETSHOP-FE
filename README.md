@@ -18,7 +18,7 @@ Frontend cho website thương mại điện tử bán sản phẩm thú cưng. �
 - Trang hồ sơ người dùng.
 - <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/8015eba5-d784-409c-aea7-6550a81a7c28" />
 - Trang quản trị cho admin: quản lý sản phẩm, người dùng, đơn hàng, danh mục.
-- <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/ec0903cf-42fd-4695-95d1-42ec36b8c4d5" />
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/ec0903cf-42fd-4695-95d1-42ec36b8c4d5" />
 <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/c82d4ded-6e7c-4371-8e84-1ea965744cab" />
 <img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/ad58e5d0-03cb-4d8d-b6e4-a3c5a0678f1f" />
 - Giao diện responsive, dùng Ant Design và styled-components.
