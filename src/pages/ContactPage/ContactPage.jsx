@@ -14,7 +14,7 @@ const ContactPage = () => {
         <div style={{ width: "100%", background: "transparent" }}>
             <div style={{ width: "min(1000px, calc(100% - 40px))", margin: "0 auto", minHeight: 620, padding: "28px 0 40px" }}>
                 <Card style={{ borderRadius: 22, borderColor: "rgba(198,169,105,.24)", background: "rgba(255,255,255,.84)", boxShadow: "0 20px 40px rgba(26,26,26,.1)" }}>
-                    <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 48 }}>Liên hệ MaisonPet</h2>
+                    <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 48 }}>Liên hệ petshop</h2>
                     <p style={{ margin: "8px 0 0", color: "#555", fontSize: 16 }}>Đội ngũ của chúng tôi sẽ phản hồi trong thời gian sớm nhất.</p>
                     <p style={{ fontSize: 16, marginTop: 18 }}><strong>Hotline:</strong> 0900 000 000</p>
                     <p style={{ fontSize: 16 }}><strong>Địa chỉ:</strong> 123 Pet Street, TP. Hồ Chí Minh</p>

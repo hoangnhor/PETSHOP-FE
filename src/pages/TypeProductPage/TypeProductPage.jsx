@@ -16,7 +16,7 @@ const TypeProductPage = () => {
     return (
         <div style={{ width: "100%", background: "transparent" }}>
             <div style={{ width: "min(1240px, calc(100% - 40px))", margin: "0 auto", minHeight: 620, padding: "30px 0 40px" }}>
-                <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 52 }}>Danh mục MaisonPet</h2>
+                <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 52 }}>Danh mục petshop</h2>
                 <p style={{ margin: "8px 0 0", color: "#555", fontSize: 16 }}>Khám phá các bộ sưu tập theo nhu cầu thú cưng.</p>
                 <Loading isPending={typesQuery.isLoading}>
                     {typesQuery.data?.data?.length ? (

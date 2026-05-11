@@ -89,7 +89,7 @@ const ProfilePage = () => {
                 <Loading isPending={isPending}>
                     <WrapperContentProfile style={{ marginTop: "0" }}>
                         <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 44 }}>My Profile</h2>
-                        <p style={{ margin: "2px 0 8px", color: "#555" }}>Quản lý thông tin tài khoản MaisonPet của bạn</p>
+                        <p style={{ margin: "2px 0 8px", color: "#555" }}>Quản lý thông tin tài khoản petshop của bạn</p>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
                             <div style={{ border: "1px solid rgba(198,169,105,.24)", borderRadius: 14, padding: 12, background: "rgba(255,255,255,.84)" }}>
                                 <p style={{ margin: 0, color: "#888", fontSize: 12 }}>Orders</p>

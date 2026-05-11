@@ -169,7 +169,7 @@ const ProductDetailsComponenet = ({ product }) => {
         <div style={{ marginTop: 20, borderRadius: 18, border: "1px solid rgba(198,169,105,.22)", background: "rgba(255,255,255,.84)", padding: 16, boxShadow: "0 12px 24px rgba(26,26,26,.08)" }}>
             <Tabs
                 items={[
-                    { key: "desc", label: "Description", children: <p style={{ color: "#555", lineHeight: 1.8 }}>{product.description || "Sản phẩm cao cấp dành cho thú cưng, tiêu chuẩn chất lượng MaisonPet."}</p> },
+                    { key: "desc", label: "Description", children: <p style={{ color: "#555", lineHeight: 1.8 }}>{product.description || "Sản phẩm cao cấp dành cho thú cưng, tiêu chuẩn chất lượng petshop."}</p> },
                     { key: "review", label: "Reviews", children: <p style={{ color: "#555", lineHeight: 1.8 }}>Đánh giá sẽ sớm được cập nhật cho sản phẩm này.</p> },
                     { key: "shipping", label: "Shipping", children: <p style={{ color: "#555", lineHeight: 1.8 }}>Giao hàng toàn quốc, đóng gói bảo quản chuẩn premium.</p> },
                     { key: "care", label: "Care Guide", children: <p style={{ color: "#555", lineHeight: 1.8 }}>Bảo quản nơi khô ráo, tránh ánh nắng trực tiếp, đọc kỹ hướng dẫn trước khi dùng.</p> },

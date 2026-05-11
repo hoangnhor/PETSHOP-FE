@@ -44,7 +44,7 @@ const HomePage = () => {
                         </div>
                     </HeroContent>
                     <HeroImage>
-                        <img src={heroImage} alt="MaisonPet Hero" />
+                        <img src={heroImage} alt="petshop Hero" />
                     </HeroImage>
                 </HeroBlock>
 
@@ -81,7 +81,7 @@ const HomePage = () => {
                 <SectionHeader>
                     <div>
                         <h2>Signature Products</h2>
-                        <p>Những lựa chọn nổi bật từ MaisonPet</p>
+                        <p>Những lựa chọn nổi bật từ petshop</p>
                     </div>
                     <Button onClick={() => navigate("/products")} style={{ borderRadius: 8, fontWeight: 800 }}>
                         Xem tất cả

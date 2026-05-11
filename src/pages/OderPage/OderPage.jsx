@@ -201,7 +201,7 @@ const OderPage = () => {
             <div style={{ width: "min(1320px, calc(100% - 40px))", margin: "0 auto", padding: "24px 0 36px", minHeight: "700px" }}>
                 <div style={{ marginBottom: 16 }}>
                     <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 46 }}>Checkout</h2>
-                    <p style={{ margin: "6px 0 0", color: "#555" }}>Hoàn tất đơn hàng với trải nghiệm premium từ MaisonPet</p>
+                    <p style={{ margin: "6px 0 0", color: "#555" }}>Hoàn tất đơn hàng với trải nghiệm premium từ petshop</p>
                 </div>
                 <Row gutter={20}>
                     <Col span={15}>

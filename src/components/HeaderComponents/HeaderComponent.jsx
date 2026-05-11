@@ -101,7 +101,7 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ width: 34, height: 34, borderRadius: 999, background: "linear-gradient(145deg,#C6A969,#A67C52)" }} />
                         <WrapperTextHeader onClick={() => navigate('/')}>
-                            MAISON<strong>PET</strong>
+                            petshop
                         </WrapperTextHeader>
                     </div>
                     {!isHiddenSearch ? (
