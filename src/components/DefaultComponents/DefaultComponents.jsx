@@ -3,9 +3,9 @@ import HeaderComponent from "../HeaderComponents/HeaderComponent";
 
 const DefaultComponents=({children})=>{
     return (
-        <div>
+        <div style={{ minHeight: "100vh", background: "transparent" }}>
             <HeaderComponent/>
-            {children}
+            <main style={{ animation: "fadeIn .45s ease" }}>{children}</main>
         </div>
     )
 }

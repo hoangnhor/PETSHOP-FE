@@ -56,11 +56,11 @@ const SignUpPage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgb(0,0,0,0.53)', height: '100vh' }}>
-      <div style={{ width: '1100px', height: '500px', borderRadius: '6px', background: '#fff', display: 'flex' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#f8f5f0,#e7d7be)', minHeight: '100vh', padding: '18px' }}>
+      <div style={{ width: '1100px', maxWidth: '100%', minHeight: '540px', borderRadius: '18px', background: 'rgba(255,255,255,.78)', backdropFilter: 'blur(10px)', border: '1px solid rgba(198,169,105,.25)', display: 'flex', overflow: 'hidden', boxShadow: '0 26px 55px rgba(26,26,26,.14)' }}>
         <WrapperContainerLeft>
-          <h1>Đăng Ký</h1>
-          <p>Vui lòng nhập nội dung bên dưới để tạo tài khoản</p>
+          <h1 style={{ fontSize: 48, margin: 0, color: '#1A1A1A', fontWeight: 700 }}>Create Account</h1>
+          <p style={{ fontSize: 16, color: '#555', margin: '8px 0 18px' }}>Vui lòng nhập thông tin để bắt đầu</p>
           <InputFormComponent style={{ marginBottom: '20px' }} placeholder='Họ và tên' value={name} onChange={handleOnchangeName} />
           <InputFormComponent style={{ marginBottom: '20px' }} placeholder='Email' value={email} onChange={handleOnchangeEmail} />
           <div style={{ position: 'relative' }}>
@@ -99,13 +99,13 @@ const SignUpPage = () => {
               onClick={handleSignUp}
               size={30}
               type="primary"
-              danger
               styleButton={{
                 height: '45px',
                 width: '200px',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '12px',
                 margin: '30px 120px 30px',
+                background: '#1A1A1A'
               }}
               textButton={'Đăng Ký'}
               styleTextButton={{ color: '#fff', fontSize: '17px', fontWeight: '700' }}

@@ -1,27 +1,32 @@
 import styled from "styled-components";
 
 export const WrapperLableText = styled.h3`
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-size: 34px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color:#1A1A1A;
 `;
 
 export const WrapperContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 `;
 
 export const WrapperTextValue = styled.div`
-  padding: 10px;
+  padding: 12px 14px;
   cursor: pointer;
-  background-color: ${(props) => (props.isSelected ? "#007bff" : "#f0f0f0")};
-  color: ${(props) => (props.isSelected ? "#fff" : "#000")};
-  border-radius: 5px;
-  transition: background-color 0.3s ease;
+  background-color: ${(props) => (props.isSelected ? "rgba(231,215,190,.78)" : "rgba(255,255,255,.72)")};
+  color: ${(props) => (props.isSelected ? "#1A1A1A" : "#555")};
+  border:1px solid ${(props) => (props.isSelected ? "rgba(198,169,105,.44)" : "rgba(198,169,105,.22)")};
+  border-radius: 12px;
+  transition: all 0.25s ease;
+  font-weight:600;
 
   &:hover {
-    background-color: ${(props) => (props.isSelected ? "#0056b3" : "#e0e0e0")};
+    background-color: rgba(255,255,255,.95);
+    color:#1A1A1A;
+    border-color:#C6A969;
   }
 `;
 

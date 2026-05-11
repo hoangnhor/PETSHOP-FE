@@ -1,72 +1,94 @@
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useState } from "react";
+import { Empty, Pagination, Select } from "antd";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import NavBarComponent from "../../components/NavBarComponent/NavBarComponent";
 import CardComponent from "../../components/CardComponent/CardComponent";
-import { Col, Pagination, Row } from "antd";
-import { WrapperNavbar, WrapperProducts } from "./style";
+import Loading from "../../components/LoadingComponent/Loading";
+import FooterComponent from "../../components/FooterComponent/FooterComponent";
 import * as ProductServices from "../../services/ProductServices";
-import { useQuery } from "@tanstack/react-query";
-import FooterComponent from "../../components/FooterComponent/FooterComponent"; // Đã được import
+import { ProductsContainer, ProductsLayout, ProductsShell, ProductsToolbar, WrapperNavbar, WrapperProducts } from "./style";
 
 const ProductsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortMode, setSortMode] = useState("newest");
+    const [searchParams] = useSearchParams();
+    const keyword = searchParams.get("keyword") || "";
+    const type = searchParams.get("type") || "";
     const productsPerPage = 9;
 
-    const fetchProductAll = async () => {
-        const res = await ProductServices.getAllProduct();
-        return res;
-    };
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [keyword, type]);
 
-    const { isLoading, data: products } = useQuery({
-        queryKey: ["products"],
-        queryFn: fetchProductAll,
-        retry: 3,
-        retryDelay: 1000,
+    const productsQuery = useQuery({
+        queryKey: ["products", keyword, type],
+        queryFn: () => ProductServices.getAllProduct({ limit: 1000, keyword, type }),
+        retry: 1,
     });
 
-    const onChange = (page) => {
-        setCurrentPage(page);
-    };
+    const sortedProducts = useMemo(() => {
+        const list = productsQuery.data?.data ? [...productsQuery.data.data] : [];
+        if (sortMode === "price-asc") return list.sort((a, b) => a.price - b.price);
+        if (sortMode === "price-desc") return list.sort((a, b) => b.price - a.price);
+        return list;
+    }, [productsQuery.data, sortMode]);
 
-    const indexOfLastProduct = currentPage * productsPerPage;
-    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-    const currentProducts = products?.data?.slice(
-        indexOfFirstProduct,
-        indexOfLastProduct
+    const currentProducts = sortedProducts.slice(
+        (currentPage - 1) * productsPerPage,
+        currentPage * productsPerPage
     );
-
-    const totalPages = products?.data
-        ? Math.ceil(products.data.length / productsPerPage)
-        : 0;
 
     return (
         <Fragment>
-            <div style={{ width: "100%", background: "#efefef" }}>
-                <div style={{ width: "1400px", margin: "0 auto" }}>
-                    <Row style={{ flexWrap: "nowrap", paddingTop: "10px" }}>
-                        <WrapperNavbar span={4}>
+            <ProductsShell>
+                <ProductsContainer>
+                    <ProductsLayout>
+                        <WrapperNavbar>
                             <NavBarComponent />
                         </WrapperNavbar>
-                        <Col span={20}>
-                            <WrapperProducts>
-                                {currentProducts?.map((product) => (
-                                    <CardComponent
-                                        key={product._id}
-                                        countInStock={product.countInStock}
-                                        image={product.image}
-                                        name={product.name}
-                                        price={product.price}
-                                        description={product.description}
-                                        type={product.type}
-                                        discount={product.discount}
-                                        selled={product.selled}
-                                    />
-                                ))}
-                            </WrapperProducts>
+                        <div>
+                            <ProductsToolbar>
+                                <div>
+                                    <h2>{keyword ? `Search: ${keyword}` : "All Collections"}</h2>
+                                    <p>{sortedProducts.length} sản phẩm trong bộ sưu tập</p>
+                                </div>
+                                <Select
+                                    value={sortMode}
+                                    style={{ width: 180 }}
+                                    onChange={setSortMode}
+                                    options={[
+                                        { value: "newest", label: "Newest" },
+                                        { value: "price-asc", label: "Price: Low to High" },
+                                        { value: "price-desc", label: "Price: High to Low" },
+                                    ]}
+                                />
+                            </ProductsToolbar>
+                            <Loading isPending={productsQuery.isLoading}>
+                                {currentProducts.length ? (
+                                    <WrapperProducts>
+                                        {currentProducts.map((product) => (
+                                            <CardComponent
+                                                key={product._id}
+                                                id={product._id}
+                                                countInStock={product.countInStock}
+                                                image={product.image}
+                                                name={product.name}
+                                                price={product.price}
+                                                discount={product.discount}
+                                            />
+                                        ))}
+                                    </WrapperProducts>
+                                ) : (
+                                    <Empty description="Không tìm thấy sản phẩm" style={{ padding: 80 }} />
+                                )}
+                            </Loading>
                             <Pagination
                                 current={currentPage}
-                                total={totalPages * 10}
+                                total={sortedProducts.length}
                                 pageSize={productsPerPage}
-                                onChange={onChange}
+                                onChange={setCurrentPage}
+                                hideOnSinglePage
                                 style={{
                                     display: "flex",
                                     justifyContent: "center",
@@ -74,13 +96,11 @@ const ProductsPage = () => {
                                     marginBottom: "20px",
                                 }}
                             />
-                        </Col>
-                    </Row>
-                </div>
-
-                {/* Thêm FooterComponent */}
+                        </div>
+                    </ProductsLayout>
+                </ProductsContainer>
                 <FooterComponent />
-            </div>
+            </ProductsShell>
         </Fragment>
     );
 };

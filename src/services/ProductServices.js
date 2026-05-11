@@ -1,43 +1,43 @@
 import { axiosJWT } from "./UserServices";
 
-export const getAllProduct = async () => {
-    const res = await axiosJWT.get(`${process.env.REACT_APP_API_URL}/api/product/getall`);
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3030/api";
+
+const authHeader = (access_token) => ({
+    Authorization: `Bearer ${access_token}`,
+});
+
+export const getAllProduct = async (query = {}) => {
+    const res = await axiosJWT.get(`${API_URL}/product/getall`, { params: query });
     return res.data;
 };
 
 export const createProduct = async (data, access_token) => {
-    const res = await axiosJWT.post(`${process.env.REACT_APP_API_URL}/api/product/create`, data, {
-        headers: {
-            token: `Bearer ${access_token}`,
-        },
+    const res = await axiosJWT.post(`${API_URL}/product/create`, data, {
+        headers: authHeader(access_token),
     });
     return res.data;
 };
 
 export const getDetailsProduct = async (id) => {
-    const res = await axiosJWT.get(`${process.env.REACT_APP_API_URL}/api/product/get-details/${id}`);
+    const res = await axiosJWT.get(`${API_URL}/product/get-details/${id}`);
     return res.data;
 };
 
 export const searchProduct = async (keyword) => {
-    const res = await axiosJWT.get(`${process.env.REACT_APP_API_URL}/api/product/search?keyword=${encodeURIComponent(keyword)}`);
+    const res = await axiosJWT.get(`${API_URL}/product/search?keyword=${encodeURIComponent(keyword)}`);
     return res.data;
 };
 
-export const updateProduct = async (id, access_token, data) => {
-    const res = await axiosJWT.put(`${process.env.REACT_APP_API_URL}/api/product/update/${id}`, data, {
-        headers: {
-            token: `Bearer ${access_token}`,
-        },
+export const updateProduct = async (id, data, access_token) => {
+    const res = await axiosJWT.put(`${API_URL}/product/update/${id}`, data, {
+        headers: authHeader(access_token),
     });
     return res.data;
 };
 
 export const deleteProduct = async (id, access_token) => {
-    const res = await axiosJWT.delete(`${process.env.REACT_APP_API_URL}/api/product/delete/${id}`, {
-        headers: {
-            token: `Bearer ${access_token}`,
-        },
+    const res = await axiosJWT.delete(`${API_URL}/product/delete/${id}`, {
+        headers: authHeader(access_token),
     });
     return res.data;
 };

@@ -9,26 +9,28 @@ export const WrapperHeader = styled.h1`
 export const WrapperContentProfile = styled.div`
     display:flex;
     flex-direction:column;
-    border: 1px  solid #ccc;
-    width: 600px;
+    border: 1px solid rgba(198,169,105,.24);
+    background:rgba(255,255,255,.85);
+    width: min(760px, 100%);
     margin: 0 auto;
-    padding:30px;
-    border-radius:10px;
-    gap:30px;
+    padding:32px;
+    border-radius:20px;
+    gap:18px;
+    box-shadow:0 20px 40px rgba(26,26,26,.1);
 `
 
 export const WrapperLabel = styled.label`
-    color:#000;
-    font-size:18px;
-    line-height:30px;
+    color:#1A1A1A;
+    font-size:15px;
+    line-height:24px;
     font-weight:600;
-    width:80px;
+    width:96px;
     text-align:left;
 `
 export const WrapperInput = styled.div`
     display:flex;
     align-items:center;
-     gap:10px;
+     gap:12px;
 `
 export const WrapperUploadFile = styled(Upload)`
     & .ant-upload.ant-upload-select.ant-upload-select-picture-card {

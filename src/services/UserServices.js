@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3030/api';
+
 export const axiosJWT = axios.create();
 
 // Interceptor để làm mới token
@@ -12,12 +14,12 @@ axiosJWT.interceptors.response.use(
             try {
                 const res = await refreshToken();
                 const newAccessToken = res.access_token;
-                localStorage.setItem('access_token', newAccessToken);
+                localStorage.setItem('access_token', JSON.stringify(newAccessToken));
                 originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
                 return axiosJWT(originalRequest);
             } catch (refreshError) {
                 localStorage.removeItem('access_token');
-                window.location.href = '/login';
+                window.location.href = '/sign-in';
                 return Promise.reject(refreshError);
             }
         }
@@ -27,7 +29,7 @@ axiosJWT.interceptors.response.use(
 
 export const loginUser = async (data) => {
     try {
-        const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/user/sign-in`, data, {
+        const res = await axios.post(`${API_URL}/user/sign-in`, data, {
             withCredentials: true,
         });
         return res.data;
@@ -38,7 +40,7 @@ export const loginUser = async (data) => {
 
 export const SignupUser = async (data) => {
     try {
-        const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/user/sign-up`, data);
+        const res = await axios.post(`${API_URL}/user/sign-up`, data);
         return res.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Lỗi server');
@@ -50,17 +52,16 @@ export const getDetailsUser = async (id, access_token) => {
         if (!access_token) {
             throw new Error('Chưa đăng nhập');
         }
-        const res = await axiosJWT.get(`${process.env.REACT_APP_API_URL}/api/user/get-details/${id}`, {
+        const res = await axiosJWT.get(`${API_URL}/user/get-details/${id}`, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
         });
         return res.data;
     } catch (error) {
-        console.log('Lỗi chi tiết:', error); // Debug
         if (error.response?.status === 401 || error.response?.status === 403) {
             localStorage.removeItem('access_token');
-            window.location.href = '/login';
+            window.location.href = '/sign-in';
         }
         throw new Error(error.response?.data?.message || 'Lỗi server');
     }
@@ -68,7 +69,7 @@ export const getDetailsUser = async (id, access_token) => {
 
 export const refreshToken = async () => {
     try {
-        const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/user/refresh-token`, null, {
+        const res = await axios.post(`${API_URL}/user/refresh-token`, null, {
             withCredentials: true,
         });
         return res.data;
@@ -79,10 +80,10 @@ export const refreshToken = async () => {
 
 export const logoutUser = async () => {
     try {
-        const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/user/log-out`, null, {
+        const res = await axios.post(`${API_URL}/user/log-out`, null, {
             withCredentials: true,
         });
-        localStorage.removeItem('access_token'); // Xóa token khi đăng xuất
+        localStorage.removeItem('access_token');
         return res.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Lỗi server');
@@ -91,7 +92,7 @@ export const logoutUser = async () => {
 
 export const updateUser = async (id, data, access_token) => {
     try {
-        const res = await axiosJWT.put(`${process.env.REACT_APP_API_URL}/api/user/update/${id}`, data, {
+        const res = await axiosJWT.put(`${API_URL}/user/update/${id}`, data, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
@@ -100,4 +101,31 @@ export const updateUser = async (id, data, access_token) => {
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Lỗi server');
     }
+};
+
+export const createUser = async (data, access_token) => {
+    const res = await axiosJWT.post(`${API_URL}/user/create`, data, {
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+        },
+    });
+    return res.data;
+};
+
+export const getAllUser = async (access_token) => {
+    const res = await axiosJWT.get(`${API_URL}/user/getall`, {
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+        },
+    });
+    return res.data;
+};
+
+export const deleteUser = async (id, access_token) => {
+    const res = await axiosJWT.delete(`${API_URL}/user/delete/${id}`, {
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+        },
+    });
+    return res.data;
 };

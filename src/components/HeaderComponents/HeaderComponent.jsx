@@ -1,12 +1,23 @@
-import React, { useEffect, useState } from "react";
-import Search from "antd/es/transfer/search";
-import { Badge, Button, Col, Popover } from 'antd';
-import { WrapperHeader, WrapperTextHeader, WrapperHeaderAccout, WrapperTextHeaderSmail, WrapperContentPopup } from './style';
+import React, { useEffect, useMemo, useState } from "react";
+import { Avatar, Badge, Popover } from 'antd';
+import {
+    HeaderActionButton,
+    HeaderActions,
+    HeaderShell,
+    HeaderTop,
+    NavigationBar,
+    WrapperContentPopup,
+    WrapperHeader,
+    WrapperHeaderAccout,
+    WrapperTextHeader,
+    WrapperTextHeaderSmail
+} from './style';
 import ButtonInputSearch from '../ButtonInputSearch/ButtonInputSearch';
 import {
     UserOutlined,
-    CaretDownOutlined,
-    ShoppingCartOutlined
+    ShoppingCartOutlined,
+    HeartOutlined,
+    DownOutlined
 } from '@ant-design/icons';
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,6 +30,8 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
     const [userName, setUserName] = useState('');
     const [userAvatar, setUserAvatar] = useState('');
     const [loading, setLoading] = useState(false);
+    const [cartCount, setCartCount] = useState(() => JSON.parse(localStorage.getItem('cartItems') || '[]').length);
+    const [wishlistCount, setWishlistCount] = useState(() => JSON.parse(localStorage.getItem('wishlistItems') || '[]').length);
 
     const navigate = useNavigate();
     const user = useSelector((state) => state.user);
@@ -29,9 +42,13 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
 
     const handleLogout = async () => {
         setLoading(true);
-        await UserSevices.logoutUser();
-        dispatch(resetUser());
-        setLoading(false);
+        try {
+            await UserSevices.logoutUser();
+            dispatch(resetUser());
+            navigate('/');
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -41,9 +58,28 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
         setLoading(false);
     }, [user?.name, user?.avatar]);
 
+    useEffect(() => {
+        const syncCartCount = () => {
+            setCartCount(JSON.parse(localStorage.getItem('cartItems') || '[]').length);
+        };
+        window.addEventListener('storage', syncCartCount);
+        window.addEventListener('cart-updated', syncCartCount);
+        const syncWishlistCount = () => {
+            setWishlistCount(JSON.parse(localStorage.getItem('wishlistItems') || '[]').length);
+        };
+        window.addEventListener('wishlist-updated', syncWishlistCount);
+        return () => {
+            window.removeEventListener('storage', syncCartCount);
+            window.removeEventListener('cart-updated', syncCartCount);
+            window.removeEventListener('wishlist-updated', syncWishlistCount);
+        };
+    }, []);
+
     const content = (
         <div>
             <WrapperContentPopup onClick={() => navigate('/profile')}>Thông tin người dùng</WrapperContentPopup>
+            <WrapperContentPopup onClick={() => navigate('/order-history')}>Lịch sử đơn hàng</WrapperContentPopup>
+            <WrapperContentPopup onClick={() => navigate('/wishlist')}>Wishlist</WrapperContentPopup>
             {user?.isAdmin && (
                 <WrapperContentPopup onClick={() => navigate('/admin')}>Quản Lý Hệ Thống</WrapperContentPopup>
             )}
@@ -51,107 +87,85 @@ const HeaderComponent = ({ isHiddenSearch = false, isHiddenCart = false }) => {
         </div>
     );
 
-    // Danh sách các mục điều hướng
-    const navItems = [
+    const navItems = useMemo(() => [
         { name: "Trang chủ", path: "/" },
         { name: "Sản phẩm", path: "/products" },
-        { name: "Dịch Vụ", path: "/services" },
-        { name: "Liên Hệ", path: "/contact" },
-    ];
+        { name: "Dịch vụ", path: "/services" },
+        { name: "Liên hệ", path: "/contact" },
+    ], []);
 
     return (
-        <div style={{ width: '100%', background: '#de8ebe', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <WrapperHeader style={{ justifyContent: isHiddenSearch && isHiddenCart ? 'space-between' : 'unset', flexDirection: 'column' }}>
-                {/* Phần logo, tìm kiếm, giỏ hàng */}
-                <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
-                    <Col span={5}>
-                        <WrapperTextHeader>petshop.vn</WrapperTextHeader>
-                    </Col>
-                    {!isHiddenSearch && (
-                        <Col span={13} style={{ marginRight: 20 }}>
-                            <ButtonInputSearch
-                                size="large"
-                                placeholder="Tìm kiếm sản phẩm..."
-                                textButton="Tìm Kiếm"
-                            />
-                        </Col>
-                    )}
-                    <Col span={6} style={{ display: 'flex', gap: '54px', alignItems: 'center' }}>
+        <HeaderShell>
+            <WrapperHeader>
+                <HeaderTop>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 999, background: "linear-gradient(145deg,#C6A969,#A67C52)" }} />
+                        <WrapperTextHeader onClick={() => navigate('/')}>
+                            MAISON<strong>PET</strong>
+                        </WrapperTextHeader>
+                    </div>
+                    {!isHiddenSearch ? (
+                        <ButtonInputSearch
+                            size="large"
+                            placeholder="Tìm vật phẩm cao cấp cho thú cưng..."
+                            textButton="Tìm kiếm"
+                            onSearch={(keyword) => navigate(`/products?keyword=${encodeURIComponent(keyword)}`)}
+                        />
+                    ) : <div />}
+                    <HeaderActions>
                         <Loading isPending={loading}>
-                            <WrapperHeaderAccout>
-                                {userAvatar ? (
-                                    <img
-                                        src={userAvatar}
-                                        alt="avatar"
-                                        style={{
-                                            height: '40px',
-                                            width: '40px',
-                                            borderRadius: '50%',
-                                            objectFit: 'cover'
-                                        }}
-                                    />
-                                ) : (
-                                    <UserOutlined style={{ fontSize: '30px' }} />
-                                )}
-                                {user?.access_token ? (
-                                    <>
-                                        <Popover content={content} trigger="click">
-                                            <div style={{ cursor: 'pointer', fontSize: '20px' }}>
-                                                {userName?.length ? userName : user?.email}
-                                            </div>
-                                        </Popover>
-                                    </>
-                                ) : (
-                                    <div onClick={handleNavigateLogin} style={{ cursor: 'pointer' }}>
-                                        <WrapperTextHeaderSmail>Đăng Nhập / Đăng Ký</WrapperTextHeaderSmail>
-                                        <div>
-                                            <WrapperTextHeaderSmail>Tài Khoản</WrapperTextHeaderSmail>
-                                            <CaretDownOutlined />
-                                        </div>
+                            {user?.access_token ? (
+                                <Popover content={content} trigger="click">
+                                    <HeaderActionButton>
+                                        <Avatar src={userAvatar} icon={<UserOutlined />} size={32} />
+                                        <WrapperHeaderAccout>
+                                            <WrapperTextHeaderSmail>{userName?.length ? userName : user?.email}</WrapperTextHeaderSmail>
+                                            <DownOutlined style={{ fontSize: 12, color: '#6b7280' }} />
+                                        </WrapperHeaderAccout>
+                                    </HeaderActionButton>
+                                </Popover>
+                            ) : (
+                                <HeaderActionButton onClick={handleNavigateLogin}>
+                                    <UserOutlined style={{ fontSize: 20, color: '#A67C52' }} />
+                                    <div>
+                                        <WrapperTextHeaderSmail>Tài khoản</WrapperTextHeaderSmail>
+                                        <div style={{ color: '#888888', fontSize: 12 }}>Đăng nhập</div>
                                     </div>
-                                )}
-                            </WrapperHeaderAccout>
+                                </HeaderActionButton>
+                            )}
                         </Loading>
                         {!isHiddenCart && (
-                            <div>
-                                <Badge count={4} size="small">
-                                    <ShoppingCartOutlined style={{ fontSize: '40px', color: '#fff' }} />
+                            <HeaderActionButton onClick={() => navigate('/wishlist')}>
+                                <Badge count={wishlistCount} size="small">
+                                    <HeartOutlined style={{ fontSize: 20, color: '#A67C52' }} />
                                 </Badge>
-                                <WrapperTextHeaderSmail>Giỏ Hàng</WrapperTextHeaderSmail>
-                            </div>
+                                <WrapperTextHeaderSmail>Wishlist</WrapperTextHeaderSmail>
+                            </HeaderActionButton>
                         )}
-                    </Col>
-                </div>
+                        {!isHiddenCart && (
+                            <HeaderActionButton onClick={() => navigate('/cart')}>
+                                <Badge count={cartCount} size="small">
+                                    <ShoppingCartOutlined style={{ fontSize: 22, color: '#A67C52' }} />
+                                </Badge>
+                                <WrapperTextHeaderSmail>Giỏ hàng</WrapperTextHeaderSmail>
+                            </HeaderActionButton>
+                        )}
+                    </HeaderActions>
+                </HeaderTop>
 
-                {/* Thanh điều hướng nằm trong khu vực màu hồng */}
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-around',
-                        alignItems: 'center',
-                        gap: '20px',
-                        padding: '10px 120px',
-                        width: '100%',
-                        marginTop: '10px'
-                    }}
-                >
+                <NavigationBar>
+                    <Link to="/products?keyword=thức ăn"><HeartOutlined /> Signature Collection</Link>
                     {navItems.map((item) => (
                         <Link
                             key={item.name}
                             to={item.path}
-                            style={{
-                                color: '#fff',
-                                fontSize: '25px',
-                                padding: '10px 20px',
-                                textDecoration: 'none'
-                            }}
                         >
                             {item.name}
                         </Link>
                     ))}
-                </div>
+                </NavigationBar>
             </WrapperHeader>
-        </div>
+        </HeaderShell>
     );
 };
 

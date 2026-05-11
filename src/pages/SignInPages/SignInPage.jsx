@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { WrapperContainerLeft, WrapperContainerRight, WrapperTextlight } from "./style";
 import InputFormComponent from "../../components/InputFormComponent/InputFormComponent";
 import ButtonComponent from "../../components/ButtonComponent/ButtonComponent";
@@ -28,6 +28,17 @@ const SignInPage = () => {
   
   const { data, isPending, isSuccess, isError } = mutation;
 
+  const handleGetDetailsUser = useCallback(async (id, token) => {
+    try {
+      const res = await UserServices.getDetailsUser(id, token);
+      if (res?.status === 'OK') {
+        dispatch(updateUser({ ...res?.data, access_token: token }));
+      }
+    } catch (error) {
+      message.error('Lỗi khi lấy thông tin người dùng!');
+    }
+  }, [dispatch]);
+
   useEffect(() => {
     if (isSuccess && data?.status === 'OK') {
       message.success('Đăng nhập thành công!');
@@ -42,18 +53,7 @@ const SignInPage = () => {
     } else if (isError || data?.status === 'ERR') {
       message.error(data?.message || 'Đăng nhập thất bại!');
     }
-  }, [isSuccess, isError, data, navigate, dispatch]);
-
-  const handleGetDetailsUser = async (id, token) => {
-    try {
-      const res = await UserServices.getDetailsUser(id, token);
-      if (res?.status === 'OK') {
-        dispatch(updateUser({ ...res?.data, access_token: token }));
-      }
-    } catch (error) {
-      message.error('Lỗi khi lấy thông tin người dùng!');
-    }
-  };
+  }, [isSuccess, isError, data, navigate, handleGetDetailsUser]);
 
   const handleOnchangeEmail = (value) => setEmail(value);
   const handleOnchangePassword = (value) => setPassword(value);
@@ -67,11 +67,11 @@ const SignInPage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgb(0,0,0,0.53)', height: '100vh' }}>
-      <div style={{ width: '1100px', height: '500px', borderRadius: '6px', background: '#fff', display: 'flex' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#f8f5f0,#e7d7be)', minHeight: '100vh', padding: '18px' }}>
+      <div style={{ width: '1100px', maxWidth: '100%', minHeight: '540px', borderRadius: '18px', background: 'rgba(255,255,255,.78)', backdropFilter: 'blur(10px)', border: '1px solid rgba(198,169,105,.25)', display: 'flex', overflow: 'hidden', boxShadow: '0 26px 55px rgba(26,26,26,.14)' }}>
         <WrapperContainerLeft>
-          <h1>Xin Chào</h1>
-          <p style={{ fontSize: '18px' }}>Đăng Nhập và tạo tài khoản</p>
+          <h1 style={{ fontSize: 48, margin: 0, color: '#1A1A1A', fontWeight: 700 }}>Welcome Back</h1>
+          <p style={{ fontSize: '16px', color: '#555', margin: '8px 0 22px' }}>Đăng nhập để tiếp tục trải nghiệm mua sắm cao cấp</p>
           <InputFormComponent
             style={{ marginBottom: '20px' }}
             placeholder='Email'
@@ -99,13 +99,13 @@ const SignInPage = () => {
               onClick={handleSignIn}
               size={30}
               type="primary"
-              danger
               styleButton={{
                 height: '45px',
                 width: '200px',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '12px',
                 margin: '30px 120px 30px',
+                background: '#1A1A1A'
               }}
               textButton={'Đăng nhập'}
               styleTextButton={{ color: '#fff', fontSize: '17px', fontWeight: '700' }}
