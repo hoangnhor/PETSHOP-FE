@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3030/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://petshopbe.onrender.com/api';
 
 export const axiosJWT = axios.create();
 
