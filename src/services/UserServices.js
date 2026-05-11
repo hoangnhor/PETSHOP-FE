@@ -1,14 +1,9 @@
 import axios from 'axios';
-
-const buildApiUrl = () => {
-    const raw = (process.env.REACT_APP_API_URL || 'https://petshopbe.onrender.com/api').trim();
-    const normalized = raw.replace(/\/+$/, '');
-    return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
-};
-
-const API_URL = buildApiUrl();
+import { API_URL, getApiErrorMessage } from './apiConfig';
 
 export const axiosJWT = axios.create();
+axiosJWT.defaults.timeout = 15000;
+axios.defaults.timeout = 15000;
 
 // Interceptor để làm mới token
 axiosJWT.interceptors.response.use(
@@ -40,7 +35,7 @@ export const loginUser = async (data) => {
         });
         return res.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Không thể đăng nhập'));
     }
 };
 
@@ -49,7 +44,7 @@ export const SignupUser = async (data) => {
         const res = await axios.post(`${API_URL}/user/sign-up`, data);
         return res.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Không thể đăng ký tài khoản'));
     }
 };
 
@@ -69,7 +64,7 @@ export const getDetailsUser = async (id, access_token) => {
             localStorage.removeItem('access_token');
             window.location.href = '/sign-in';
         }
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Không thể tải thông tin người dùng'));
     }
 };
 
@@ -80,7 +75,7 @@ export const refreshToken = async () => {
         });
         return res.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Phiên đăng nhập đã hết hạn'));
     }
 };
 
@@ -92,7 +87,7 @@ export const logoutUser = async () => {
         localStorage.removeItem('access_token');
         return res.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Không thể đăng xuất'));
     }
 };
 
@@ -105,7 +100,7 @@ export const updateUser = async (id, data, access_token) => {
         });
         return res.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Lỗi server');
+        throw new Error(getApiErrorMessage(error, 'Không thể cập nhật người dùng'));
     }
 };
 

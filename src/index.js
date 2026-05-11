@@ -10,7 +10,21 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error) => {
+        const status = error?.response?.status;
+        if (status && status >= 400 && status < 500) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      staleTime: 30000,
+    },
+  },
+});
 root.render(
   // <React.StrictMode>
   <QueryClientProvider client={queryClient}>
