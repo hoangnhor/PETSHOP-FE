@@ -1,28 +1,76 @@
-# Petshop.vn Frontend
+# petshop Frontend (ReactJS)
 
-Frontend cho website thương mại điện tử bán sản phẩm thú cưng, xây dựng bằng React và kết nối REST API backend Node.js/Express.
+Frontend cho hệ thống thương mại điện tử `petshop`, tập trung vào trải nghiệm mua hàng online cho khách hàng và trang quản trị cho admin.
 
-## Tính năng chính
+## 1) Thông tin dự án
 
-- Luxury homepage: hero, category cards, flash sale, featured products.
-- Trang sản phẩm: tìm kiếm, lọc theo danh mục, sắp xếp giá.
-- Trang chi tiết sản phẩm: số lượng, thêm giỏ, mua ngay, related products, tabs.
-- Cart, Checkout, Order History tách riêng.
-- Wishlist cho người dùng đăng nhập.
-- Đăng ký, đăng nhập, refresh token, hồ sơ người dùng.
-- Admin quản lý user, sản phẩm, đơn hàng, danh mục.
+- Project: `petshop`
+- Domain nghiệp vụ: E-commerce sản phẩm thú cưng
+- Người dùng mục tiêu:
+  - Khách hàng mua sản phẩm online
+  - Admin quản lý sản phẩm, danh mục, đơn hàng, người dùng
 
-## Công nghệ
+## 2) Vai trò thực hiện
 
-- React 18
-- React Router DOM
-- Redux Toolkit, React Redux
-- TanStack React Query
-- Ant Design
-- Axios
-- Styled Components
+- Vai trò: **Fullstack Developer** (trong repo này là phần **Frontend**)
+- Thực hiện:
+  - Thiết kế luồng UI/UX mua hàng và quản trị
+  - Kết nối API, xử lý state, auth flow, error/loading state
+  - Tối ưu behavior production (query cache/retry, chuẩn hóa API URL)
 
-## Chạy dự án
+## 3) Tính năng chính
+
+- Authentication UI:
+  - Đăng ký, đăng nhập, đăng xuất
+  - Tự refresh access token khi token hết hạn
+- Trang khách hàng:
+  - Trang chủ, danh sách sản phẩm, tìm kiếm/lọc
+  - Chi tiết sản phẩm, related products
+  - Giỏ hàng, checkout, lịch sử đơn hàng
+  - Wishlist
+- Trang người dùng:
+  - Quản lý hồ sơ
+- Trang quản trị:
+  - Quản lý User / Product / Order
+- UX kỹ thuật:
+  - Loading/error state rõ ràng
+  - React Query cache + retry strategy cho production
+  - Chuẩn hóa `REACT_APP_API_URL` để tránh lỗi sai URL khi deploy
+
+## 4) Công nghệ và thư viện
+
+- Core:
+  - `react`, `react-dom`, `react-router-dom`
+- State/Data:
+  - `redux`, `@reduxjs/toolkit`, `react-redux`
+  - `@tanstack/react-query`, `@tanstack/react-query-devtools`
+- UI:
+  - `antd`
+  - `styled-components`
+  - `react-slick`, `slick-carousel`
+- Networking/Auth:
+  - `axios`
+  - `jwt-decode`
+- Khác:
+  - `dotenv`, `web-vitals`
+- Test/CRA tooling:
+  - `react-scripts`
+  - `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`
+
+## 5) Cấu trúc thư mục chính
+
+```text
+FE/src
+├── components/          # UI components dùng lại
+├── pages/               # Các page chính
+├── services/            # API clients
+├── redux/               # Redux store/slices
+├── routes/              # Route config
+├── App.js               # App shell + protected routes
+└── index.js             # Entry + QueryClient/Provider
+```
+
+## 6) Cài đặt và chạy local
 
 ```bash
 cd FE
@@ -30,23 +78,27 @@ npm install
 npm start
 ```
 
-Mặc định frontend chạy tại `http://localhost:3000`.
+Frontend mặc định chạy tại: `http://localhost:3000`
 
-## Cấu hình môi trường
+## 7) Environment variables
 
-Tạo `.env` trong thư mục `FE`:
+Tạo file `.env` trong thư mục `FE`:
 
 ```env
 REACT_APP_API_URL=http://localhost:3030/api
 ```
 
-## Build production
+Lưu ý:
+- Ở production có thể dùng:
+  - `REACT_APP_API_URL=https://petshopbe.onrender.com/api`
+
+## 8) Build production
 
 ```bash
 npm run build
 ```
 
-## Routes chính
+## 9) Danh sách route chính
 
 - `/`
 - `/products`
@@ -58,18 +110,12 @@ npm run build
 - `/profile`
 - `/admin`
 
-## Fullstack local run
+## 10) Deploy
 
-Terminal 1:
+- Frontend production: Vercel
+- URL: `https://petshop-fe.vercel.app`
 
-```bash
-cd BE
-npm run dev
-```
+## 11) Liên kết liên quan
 
-Terminal 2:
-
-```bash
-cd FE
-npm start
-```
+- Backend repo: `https://github.com/hoangnhor/petshopBE`
+- Frontend repo: `https://github.com/hoangnhor/petshopFE`
