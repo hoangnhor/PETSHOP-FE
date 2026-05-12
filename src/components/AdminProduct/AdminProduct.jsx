@@ -27,12 +27,14 @@ const AdminProduct = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newTypeName, setNewTypeName] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
   const productsQuery = useQuery({
-    queryKey: ["products-admin"],
-    queryFn: () => ProductServices.getAllProduct({ limit: 1000 }),
+    queryKey: ["products-admin", currentPage, pageSize],
+    queryFn: () => ProductServices.getAllProduct({ limit: pageSize, page: currentPage - 1 }),
   });
 
   const typesQuery = useQuery({
@@ -293,6 +295,22 @@ const AdminProduct = () => {
         loading={productsQuery.isLoading || deleteProductMutation.isPending}
         columns={columns}
         dataSource={productsQuery.data?.data || []}
+        pagination={{
+          current: currentPage,
+          pageSize,
+          total: productsQuery.data?.total || 0,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50"],
+          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
+          onChange: (page, nextSize) => {
+            if (nextSize !== pageSize) {
+              setPageSize(nextSize);
+              setCurrentPage(1);
+              return;
+            }
+            setCurrentPage(page);
+          },
+        }}
       />
 
       <Modal

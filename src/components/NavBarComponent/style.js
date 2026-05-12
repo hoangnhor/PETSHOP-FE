@@ -16,9 +16,9 @@ export const WrapperContent = styled.div`
 export const WrapperTextValue = styled.div`
   padding: 12px 14px;
   cursor: pointer;
-  background-color: ${(props) => (props.isSelected ? "rgba(231,215,190,.78)" : "rgba(255,255,255,.72)")};
-  color: ${(props) => (props.isSelected ? "#1A1A1A" : "#555")};
-  border:1px solid ${(props) => (props.isSelected ? "rgba(198,169,105,.44)" : "rgba(198,169,105,.22)")};
+  background-color: ${(props) => (props.$isSelected ? "rgba(231,215,190,.78)" : "rgba(255,255,255,.72)")};
+  color: ${(props) => (props.$isSelected ? "#1A1A1A" : "#555")};
+  border:1px solid ${(props) => (props.$isSelected ? "rgba(198,169,105,.44)" : "rgba(198,169,105,.22)")};
   border-radius: 12px;
   transition: all 0.25s ease;
   font-weight:600;

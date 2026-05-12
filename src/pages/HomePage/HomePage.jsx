@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Col, Empty, Row, Statistic } from "antd";
+import { Alert, Button, Col, Empty, Row, Statistic } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import heroImage from "../../assets/images/sp.webp";
@@ -87,6 +87,15 @@ const HomePage = () => {
                         Xem tất cả
                     </Button>
                 </SectionHeader>
+                {productsQuery.isError && (
+                    <Alert
+                        type="error"
+                        showIcon
+                        message="Không thể tải danh sách sản phẩm"
+                        description={productsQuery.error?.message}
+                        style={{ marginBottom: 16 }}
+                    />
+                )}
                 <Loading isPending={productsQuery.isLoading}>
                     {productsQuery.data?.data?.length ? (
                         <WrapperProducts>

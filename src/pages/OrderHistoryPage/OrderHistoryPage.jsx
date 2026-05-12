@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Table, Tag } from "antd";
+import { Alert, Card, Table, Tag } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import * as BillServices from "../../services/BillServices";
@@ -38,6 +38,15 @@ const OrderHistoryPage = () => {
             <div style={{ width: "min(1240px, calc(100% - 40px))", margin: "0 auto", minHeight: 620, padding: "30px 0 40px" }}>
                 <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 48 }}>Order History</h2>
                 <p style={{ margin: "8px 0 18px", color: "#555" }}>Theo dõi lịch sử đơn hàng và trạng thái xử lý</p>
+                {ordersQuery.isError && (
+                    <Alert
+                        type="error"
+                        showIcon
+                        message="Không thể tải lịch sử đơn hàng"
+                        description={ordersQuery.error?.message}
+                        style={{ marginBottom: 16 }}
+                    />
+                )}
                 <Card style={{ borderRadius: 18 }}>
                     <Table rowKey="_id" loading={ordersQuery.isLoading} columns={columns} dataSource={ordersQuery.data?.data || []} />
                 </Card>

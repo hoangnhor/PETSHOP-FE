@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useMemo, useState } from "react";
-import { Empty, Pagination, Select } from "antd";
+import { Alert, Empty, Pagination, Select } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import NavBarComponent from "../../components/NavBarComponent/NavBarComponent";
@@ -19,25 +19,28 @@ const ProductsPage = () => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [keyword, type]);
+    }, [keyword, type, sortMode]);
+
+    const sortQuery = useMemo(() => {
+        if (sortMode === "price-asc") return "asc,price";
+        if (sortMode === "price-desc") return "desc,price";
+        return undefined;
+    }, [sortMode]);
 
     const productsQuery = useQuery({
-        queryKey: ["products", keyword, type],
-        queryFn: () => ProductServices.getAllProduct({ limit: 1000, keyword, type }),
+        queryKey: ["products", keyword, type, currentPage, productsPerPage, sortQuery],
+        queryFn: () => ProductServices.getAllProduct({
+            limit: productsPerPage,
+            page: currentPage - 1,
+            keyword,
+            type,
+            sort: sortQuery,
+        }),
         retry: 1,
     });
 
-    const sortedProducts = useMemo(() => {
-        const list = productsQuery.data?.data ? [...productsQuery.data.data] : [];
-        if (sortMode === "price-asc") return list.sort((a, b) => a.price - b.price);
-        if (sortMode === "price-desc") return list.sort((a, b) => b.price - a.price);
-        return list;
-    }, [productsQuery.data, sortMode]);
-
-    const currentProducts = sortedProducts.slice(
-        (currentPage - 1) * productsPerPage,
-        currentPage * productsPerPage
-    );
+    const currentProducts = productsQuery.data?.data || [];
+    const totalProducts = productsQuery.data?.total || 0;
 
     return (
         <Fragment>
@@ -51,7 +54,7 @@ const ProductsPage = () => {
                             <ProductsToolbar>
                                 <div>
                                     <h2>{keyword ? `Search: ${keyword}` : "All Collections"}</h2>
-                                    <p>{sortedProducts.length} sản phẩm trong bộ sưu tập</p>
+                                    <p>{totalProducts} sản phẩm trong bộ sưu tập</p>
                                 </div>
                                 <Select
                                     value={sortMode}
@@ -64,6 +67,15 @@ const ProductsPage = () => {
                                     ]}
                                 />
                             </ProductsToolbar>
+                            {productsQuery.isError && (
+                                <Alert
+                                    type="error"
+                                    showIcon
+                                    message="Không thể tải danh sách sản phẩm"
+                                    description={productsQuery.error?.message}
+                                    style={{ marginBottom: 16 }}
+                                />
+                            )}
                             <Loading isPending={productsQuery.isLoading}>
                                 {currentProducts.length ? (
                                     <WrapperProducts>
@@ -85,7 +97,7 @@ const ProductsPage = () => {
                             </Loading>
                             <Pagination
                                 current={currentPage}
-                                total={sortedProducts.length}
+                                total={totalProducts}
                                 pageSize={productsPerPage}
                                 onChange={setCurrentPage}
                                 hideOnSinglePage

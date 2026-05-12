@@ -73,7 +73,7 @@ npm start
 
 `.env`
 ```env
-REACT_APP_API_URL=
+REACT_APP_API_URL=http://localhost:3030/api
 ```
 
 Build:

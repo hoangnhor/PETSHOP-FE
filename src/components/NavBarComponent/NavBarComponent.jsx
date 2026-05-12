@@ -20,7 +20,7 @@ const NavBarComponent = () => {
             <WrapperContent>
                 <WrapperTextValue
                     onClick={() => navigate("/products")}
-                    isSelected={!selectedType}
+                    $isSelected={!selectedType}
                 >
                     Tất cả sản phẩm
                 </WrapperTextValue>
@@ -28,7 +28,7 @@ const NavBarComponent = () => {
                     <WrapperTextValue
                         key={type._id}
                         onClick={() => navigate(`/products?type=${type._id}`)}
-                        isSelected={selectedType === type._id}
+                        $isSelected={selectedType === type._id}
                     >
                         {type.name}
                     </WrapperTextValue>

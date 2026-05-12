@@ -1,12 +1,14 @@
 import { Spin } from "antd";
 import React from "react";
 
-
-
-const Loading =({children, isPending, delay=500})=>{
+const Loading = ({ children, isPending, delay = 250, tip = "Đang tải dữ liệu..." }) => {
     return (
-        <Spin spinning={isPending}  delay={delay} >
-            {children}</Spin>
-    )
-}
-export default Loading
+        <div aria-busy={isPending} aria-live="polite">
+            <Spin spinning={isPending} delay={delay} tip={isPending ? tip : undefined}>
+                {children}
+            </Spin>
+        </div>
+    );
+};
+
+export default Loading;
