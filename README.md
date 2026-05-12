@@ -10,9 +10,9 @@
 
 > “petshop FE” là lớp trải nghiệm khách hàng và vận hành admin cho hệ thống e-commerce thú cưng, tập trung vào tốc độ phản hồi UI, tính ổn định phiên đăng nhập và khả năng mở rộng product flows.
 
-- 🌐 Live Demo: `<YOUR_FE_LIVE_URL>`
-- 🔗 Frontend Repo: `<YOUR_FE_REPO_URL>`
-- 🔗 Backend Repo: `<YOUR_BE_REPO_URL>`
+- 🌐 Live Demo: `https://htpetshop.vercel.app/`
+- 🔗 Frontend Repo: `https://github.com/hoangnhor/petshopFE`
+- 🔗 Backend Repo: `https://github.com/hoangnhor/petshopBE`
 
 ---
 
