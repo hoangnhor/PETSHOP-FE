@@ -22,12 +22,27 @@ const statusClassMap = {
   cancelled: "cancelled",
 };
 
+const statusIconMap = {
+  pending: "clock",
+  confirmed: "clock",
+  shipping: "truck",
+  delivered: "check",
+  cancelled: "x",
+};
+
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
 
 const formatDate = (value) => {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("vi-VN");
+};
+
+const getOrderTotal = (order) => {
+  if (!order) return 0;
+  if (Number.isFinite(Number(order?.totalAmount))) return Number(order.totalAmount);
+  if (Number.isFinite(Number(order?.tongtien))) return Number(order.tongtien);
+  return 0;
 };
 
 const OrderHistoryPage = () => {
@@ -41,7 +56,7 @@ const OrderHistoryPage = () => {
     enabled: Boolean(user.access_token),
   });
 
-  const allOrders = useMemo(() => (ordersQuery.data?.data || []).filter((order) => Number(order?.tongtien || 0) > 0), [ordersQuery.data?.data]);
+  const allOrders = useMemo(() => (ordersQuery.data?.data || []).filter((order) => getOrderTotal(order) > 0), [ordersQuery.data?.data]);
   const rows = useMemo(() => (filter === "all" ? allOrders : allOrders.filter((order) => order.orderStatus === filter)), [allOrders, filter]);
 
   const stats = useMemo(
@@ -161,11 +176,11 @@ const OrderHistoryPage = () => {
                           #{order?._id?.slice(-8).toUpperCase()}
                         </div>
                       </td>
-                      <td>{formatMoney(order.tongtien)}</td>
+                      <td>{formatMoney(getOrderTotal(order))}</td>
                       <td>{order.paymentMethod || "COD"}</td>
                       <td>
                         <span className={`status ${statusClassMap[order.orderStatus] || "pending"}`}>
-                          <PetshopIcon name={order.orderStatus === "shipping" ? "truck" : order.orderStatus === "delivered" ? "check" : "clock"} size={14} />
+                          <PetshopIcon name={statusIconMap[order.orderStatus] || "clock"} size={14} />
                           {statusTextMap[order.orderStatus] || order.orderStatus}
                         </span>
                       </td>

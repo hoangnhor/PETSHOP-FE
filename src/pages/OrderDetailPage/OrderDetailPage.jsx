@@ -15,6 +15,30 @@ const statusTextMap = {
 };
 
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
+const getSubTotal = (order) => {
+  const computed = (order?.items || []).reduce((sum, item) => {
+    const subtotal = Number(item?.subtotal);
+    if (Number.isFinite(subtotal) && subtotal > 0) return sum + subtotal;
+    const price = Number(item?.priceSnapshot || item?.price);
+    const qty = Number(item?.quantity || 0);
+    if (Number.isFinite(price) && price > 0 && Number.isFinite(qty) && qty > 0) return sum + price * qty;
+    return sum;
+  }, 0);
+  if (computed > 0) return computed;
+  const total = Number(order?.totalAmount ?? order?.tongtien ?? 0);
+  const shipping = Number(order?.shippingFee ?? 0);
+  if (Number.isFinite(total) && total > 0) return Math.max(total - (Number.isFinite(shipping) ? shipping : 0), 0);
+  return 0;
+};
+const getShippingFee = (order) => {
+  if (Number.isFinite(Number(order?.shippingFee))) return Number(order.shippingFee);
+  return 0;
+};
+const getOrderTotal = (order) => {
+  if (Number.isFinite(Number(order?.totalAmount))) return Number(order.totalAmount);
+  if (Number.isFinite(Number(order?.tongtien))) return Number(order.tongtien);
+  return getSubTotal(order) + getShippingFee(order);
+};
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -99,9 +123,9 @@ const OrderDetailPage = () => {
             <aside className="card">
               <h2>Tóm tắt</h2>
               <div className="rows">
-                <div className="row"><span>Tạm tính</span><b>{formatMoney(order.tongtien)}</b></div>
-                <div className="row"><span>Phí vận chuyển</span><b>{formatMoney(30000)}</b></div>
-                <div className="row"><span>Tổng cộng</span><b>{formatMoney(Number(order.tongtien || 0) + 30000)}</b></div>
+                <div className="row"><span>Tạm tính</span><b>{formatMoney(getSubTotal(order))}</b></div>
+                <div className="row"><span>Phí vận chuyển</span><b>{formatMoney(getShippingFee(order))}</b></div>
+                <div className="row"><span>Tổng cộng</span><b>{formatMoney(getOrderTotal(order))}</b></div>
                 <div className="row"><span>Thanh toán</span><b>{order.paymentMethod || "COD"}</b></div>
                 <div className="row"><span>Người nhận</span><b>{order?.shippingAddress?.fullName || "-"}</b></div>
                 <div className="row"><span>Số điện thoại</span><b>{order?.shippingAddress?.phone || "-"}</b></div>

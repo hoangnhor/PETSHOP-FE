@@ -30,6 +30,7 @@ const HeaderComponent = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [activeAuthTab, setActiveAuthTab] = useState("login");
   const [submitting, setSubmitting] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);
   const [activeHash, setActiveHash] = useState("");
   const [cartCount, setCartCount] = useState(() => readCount("cartItems"));
   const [wishlistCount, setWishlistCount] = useState(() => readCount("wishlistItems"));
@@ -75,6 +76,19 @@ const HeaderComponent = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    const syncNavState = () => {
+      if (window.innerWidth <= 900) {
+        setNavOpen(false);
+      } else {
+        setNavOpen(true);
+      }
+    };
+    syncNavState();
+    window.addEventListener("resize", syncNavState);
+    return () => window.removeEventListener("resize", syncNavState);
+  }, []);
+
+  useEffect(() => {
     const closeOnOutside = (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -109,6 +123,11 @@ const HeaderComponent = () => {
       return;
     }
     navigate(`/#${targetId}`);
+  };
+
+  const handleNavAction = (callback) => {
+    callback();
+    if (window.innerWidth <= 900) setNavOpen(false);
   };
 
   const handleLogout = async () => {
@@ -170,6 +189,69 @@ const HeaderComponent = () => {
     }
   };
 
+  const mergeGuestCartOnLogin = async (token) => {
+    const localItems = JSON.parse(localStorage.getItem("cartItems") || "[]")
+      .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0);
+    if (!localItems.length) return;
+
+    const serverRes = await CartServices.getMyCart(token);
+    const serverItems = (serverRes?.data?.items || []).map((item) => ({
+      idsp: item.productId,
+      quantity: Number(item.quantity || 1),
+      name: item.name || "",
+      image: item.image || "",
+      price: Number(item.price || 0),
+      discount: Number(item.discount || 0),
+      countInStock: Number(item.countInStock || 0),
+      category: item.category || "Sản phẩm",
+    }));
+
+    const mergedMap = new Map();
+    serverItems.forEach((item) => mergedMap.set(item.idsp, { ...item }));
+    localItems.forEach((item) => {
+      const existed = mergedMap.get(item.idsp);
+      if (!existed) {
+        mergedMap.set(item.idsp, { ...item, quantity: Number(item.quantity || 1) });
+        return;
+      }
+      mergedMap.set(item.idsp, { ...existed, quantity: Number(existed.quantity || 0) + Number(item.quantity || 0) });
+    });
+
+    const mergedItems = Array.from(mergedMap.values()).filter((item) => item?.idsp && Number(item?.quantity || 0) > 0);
+    await CartServices.updateMyCart(
+      {
+        items: mergedItems.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
+      },
+      token
+    );
+    localStorage.setItem("cartItems", JSON.stringify(mergedItems));
+    window.dispatchEvent(new Event("cart-updated"));
+  };
+
+  const mergeGuestWishlistOnLogin = async (token) => {
+    const localWishlistItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]").filter((item) => item?.idsp);
+    const localIds = [...new Set(localWishlistItems.map((item) => String(item.idsp)))];
+    if (!localIds.length) return;
+
+    const serverRes = await WishlistServices.getMyWishlist(token);
+    const serverIds = (serverRes?.data?.productIds || [])
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item?._id || item?.id || item?.productId || "";
+      })
+      .filter(Boolean)
+      .map((id) => String(id));
+    const serverSet = new Set(serverIds);
+    const missingIds = localIds.filter((id) => !serverSet.has(id));
+
+    if (missingIds.length) {
+      await Promise.all(missingIds.map((id) => WishlistServices.addWishlistItem(id, token).catch(() => null)));
+    }
+
+    localStorage.setItem("wishlistItems", JSON.stringify(localWishlistItems));
+    window.dispatchEvent(new Event("wishlist-updated"));
+  };
+
   const onLogin = async (values) => {
     setSubmitting(true);
     try {
@@ -177,6 +259,8 @@ const HeaderComponent = () => {
       const token = res?.access_token;
       if (!token) throw new Error(res?.message || "Đăng nhập thất bại");
       localStorage.setItem("access_token", JSON.stringify(token));
+      await mergeGuestCartOnLogin(token);
+      await mergeGuestWishlistOnLogin(token);
       await hydrateUserFromToken(token);
       setAuthOpen(false);
       loginForm.resetFields();
@@ -224,6 +308,22 @@ const HeaderComponent = () => {
     <header className="site-header">
       <div className="header">
         <div className="container header-main">
+          <button
+            type="button"
+            className={`mobile-menu-toggle ${navOpen ? "active" : ""}`}
+            aria-expanded={navOpen}
+            aria-controls="site-nav"
+            aria-label={navOpen ? "Thu gọn menu điều hướng" : "Mở menu điều hướng"}
+            onClick={() => setNavOpen((prev) => !prev)}
+          >
+            <svg viewBox="0 0 24 24" className="nav-toggle-icon" aria-hidden="true">
+              <path d="M4 7h16"></path>
+              <path d="M4 12h16"></path>
+              <path d="M4 17h16"></path>
+            </svg>
+            Menu
+          </button>
+
           <button type="button" className="logo" onClick={() => navigate("/")}>pet<span>shop</span></button>
 
           <div className="search">
@@ -268,6 +368,7 @@ const HeaderComponent = () => {
                 className="hbtn profile"
                 aria-haspopup="menu"
                 aria-expanded={isLoggedIn && profileOpen}
+                aria-label={isLoggedIn ? "Tùy chọn tài khoản" : "Mở đăng nhập"}
                 onClick={() => {
                   if (!isLoggedIn) {
                     setAuthOpen(true);
@@ -286,6 +387,8 @@ const HeaderComponent = () => {
               {isLoggedIn && profileOpen ? (
                 <div className="profile-menu" role="menu">
                   <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigate("/profile"); }}>Hồ sơ của tôi</button>
+                  <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigate("/my-pets"); }}>Thú cưng của tôi</button>
+                  <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigate("/my-appointments"); }}>Lịch hẹn của tôi</button>
                   <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigate("/order-history"); }}>Lịch sử đơn hàng</button>
                   {user?.isAdmin ? <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigate("/admin"); }}>Quản trị</button> : null}
                   <button type="button" role="menuitem" onClick={handleLogout}>Đăng xuất</button>
@@ -295,9 +398,9 @@ const HeaderComponent = () => {
           </div>
         </div>
 
-        <div className="nav-wrap">
-          <nav className="container nav">
-            <button type="button" className={isFeaturedHash ? "active" : ""} onClick={() => handleNavTarget("featured")}>
+        <div className={`nav-wrap ${navOpen ? "open" : "closed"}`}>
+          <nav id="site-nav" className="container nav">
+            <button type="button" className={isFeaturedHash ? "active" : ""} onClick={() => handleNavAction(() => handleNavTarget("featured"))}>
               <span className="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path d="M12 20s-7-4.4-9-8.5C1.5 8.2 3.5 5 7 5c2 0 3.2 1.1 5 3 1.8-1.9 3-3 5-3 3.5 0 5.5 3.2 4 6.5C19 15.6 12 20 12 20Z" />
@@ -305,7 +408,7 @@ const HeaderComponent = () => {
               </span>
               Bộ sưu tập nổi bật
             </button>
-            <button type="button" className={isFlashHash ? "active" : ""} onClick={() => handleNavTarget("flash-sale")}>
+            <button type="button" className={isFlashHash ? "active" : ""} onClick={() => handleNavAction(() => handleNavTarget("flash-sale"))}>
               <span className="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path d="M20 13l-7 7L4 11V4h7l9 9z" />
@@ -314,10 +417,10 @@ const HeaderComponent = () => {
               </span>
               Giảm giá
             </button>
-            <button type="button" className={isHome ? "active" : ""} onClick={() => navigate("/")}>Trang chủ</button>
-            <button type="button" className={isProducts ? "active" : ""} onClick={() => navigate("/products")}>Sản phẩm</button>
-            <button type="button" className={isServices ? "active" : ""} onClick={() => navigate("/services")}>Dịch vụ</button>
-            <button type="button" className={isContact || isContactHash ? "active" : ""} onClick={() => navigate("/contact")}>Liên hệ</button>
+            <button type="button" className={isHome ? "active" : ""} onClick={() => handleNavAction(() => navigate("/"))}>Trang chủ</button>
+            <button type="button" className={isProducts ? "active" : ""} onClick={() => handleNavAction(() => navigate("/products"))}>Sản phẩm</button>
+            <button type="button" className={isServices ? "active" : ""} onClick={() => handleNavAction(() => navigate("/services"))}>Dịch vụ</button>
+            <button type="button" className={isContact || isContactHash ? "active" : ""} onClick={() => handleNavAction(() => navigate("/contact"))}>Liên hệ</button>
           </nav>
         </div>
       </div>

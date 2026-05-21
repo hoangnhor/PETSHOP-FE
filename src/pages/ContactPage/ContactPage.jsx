@@ -58,8 +58,36 @@ const ContactPage = () => {
 
   useEffect(() => {
     const service = searchParams.get("service");
+    const date = searchParams.get("date");
+    const petType = searchParams.get("petType");
+    const petSize = searchParams.get("petSize");
+    const note = searchParams.get("note");
     if (service) {
-      setFormData((prev) => ({ ...prev, content: `Tôi muốn đặt lịch dịch vụ: ${service}` }));
+      const formattedDate = date
+        ? (() => {
+            const parsed = new Date(date);
+            if (!Number.isFinite(parsed.getTime())) return date;
+            return parsed.toLocaleString("vi-VN", {
+              hour12: false,
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          })()
+        : "";
+      const typeLabel = petType === "dog" ? "Chó" : petType === "cat" ? "Mèo" : "";
+      const sizeLabel = petSize === "small" ? "Nhỏ" : petSize === "medium" ? "Vừa" : petSize === "large" ? "Lớn" : "";
+      const parts = [
+        `Tôi muốn đặt lịch dịch vụ: ${service}`,
+        formattedDate ? `vào ${formattedDate}` : "",
+        typeLabel ? `Loại thú cưng: ${typeLabel}` : "",
+        sizeLabel ? `Kích thước: ${sizeLabel}` : "",
+        note ? `Ghi chú: ${note}` : "",
+      ].filter(Boolean);
+      const bookingText = parts.join(" | ");
+      setFormData((prev) => ({ ...prev, content: bookingText }));
     }
   }, [searchParams]);
 
@@ -70,16 +98,29 @@ const ContactPage = () => {
 
   const onSubmit = async (event) => {
     event.preventDefault();
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.content.trim()) {
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const phone = formData.phone.trim();
+    const content = formData.content.trim();
+
+    if (!name || !phone || !content) {
       message.error("Vui lòng nhập Họ tên, Số điện thoại và Nội dung");
+      return;
+    }
+    if (!/^[0-9+\s()-]{9,15}$/.test(phone)) {
+      message.error("Số điện thoại không hợp lệ");
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      message.error("Email không hợp lệ");
       return;
     }
     try {
       const res = await createContactMutation.mutateAsync({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        content: formData.content.trim(),
+        name,
+        email,
+        phone,
+        content,
       });
       if (res?.status !== "OK") {
         throw new Error(res?.message || "Không thể gửi liên hệ");
@@ -112,7 +153,7 @@ const ContactPage = () => {
         </section>
 
         <section className="layout">
-          <div className="card contact-form-card">
+          <div className="card">
             <h2>Thông tin liên hệ</h2>
             <div className="info-grid">
               <div className="info">
@@ -135,21 +176,21 @@ const ContactPage = () => {
             <img className="map" src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1200&auto=format&fit=crop" alt="Bản đồ petshop" />
           </div>
 
-          <div className="card">
+          <div className="card contact-form-card">
             <h2>Gửi tin nhắn</h2>
             <form onSubmit={onSubmit}>
               <div className="form-grid">
                 <div className="field">
                   <label>Họ tên</label>
-                  <input name="name" value={formData.name} onChange={onChange} type="text" placeholder="Nhập họ tên" />
+                  <input name="name" value={formData.name} onChange={onChange} type="text" placeholder="Nhập họ tên" autoComplete="name" />
                 </div>
                 <div className="field">
                   <label>Email</label>
-                  <input name="email" value={formData.email} onChange={onChange} type="email" placeholder="Nhập email" />
+                  <input name="email" value={formData.email} onChange={onChange} type="email" placeholder="Nhập email" autoComplete="email" />
                 </div>
                 <div className="field full">
                   <label>Số điện thoại</label>
-                  <input name="phone" value={formData.phone} onChange={onChange} type="text" placeholder="Nhập số điện thoại" />
+                  <input name="phone" value={formData.phone} onChange={onChange} type="tel" placeholder="Nhập số điện thoại" autoComplete="tel" />
                 </div>
                 <div className="field full">
                   <label>Nội dung</label>

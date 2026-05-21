@@ -1,9 +1,10 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { serviceCatalog } from "../../data/serviceCatalog";
 import * as ServiceServices from "../../services/ServiceServices";
-import { ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
+import { PetshopIcon } from "../../components/ui";
+import * as message from "../../components/Message/Message";
 import "./ServicesPage.css";
 
 const steps = [
@@ -57,43 +58,52 @@ const whyItems = [
 
 const ServicesPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [quickForm, setQuickForm] = useState({
+    name: "",
+    phone: "",
+    serviceSlug: "",
+    date: "",
+    note: "",
+  });
   const servicesQuery = useQuery({
     queryKey: ["services-page"],
     queryFn: () => ServiceServices.getAllServices({ limit: 100 }),
   });
 
-  const apiServices = servicesQuery?.data?.data || [];
+  const services = serviceCatalog.slice(0, 4);
 
-  const services = (Array.isArray(apiServices) && apiServices.length > 0
-    ? apiServices.map((service) => ({
-        slug: service.slug,
-        title: service.name,
-        price: `Từ ${Number(service.salePrice > 0 ? service.salePrice : service.price || 0).toLocaleString("vi-VN")}đ`,
-        image: service.image || "/service-images/service-spa-thu-cung.jpg",
-        shortDescription: service.description || "Dịch vụ chăm sóc thú cưng.",
-        duration: `${Number(service.durationMin || 60)} phút`,
-      }))
-    : serviceCatalog).slice(0, 4) || [];
+  const handleQuickChange = (event) => {
+    const { name, value } = event.target;
+    setQuickForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-  if (servicesQuery.isLoading) {
-    return (
-      <div className="services-view">
-        <main className="container page">
-          <LoadingState text="Đang tải danh sách dịch vụ..." />
-        </main>
-      </div>
-    );
-  }
-
-  if (servicesQuery.isError) {
-    return (
-      <div className="services-view">
-        <main className="container page">
-          <ErrorState message="Không thể tải danh sách dịch vụ." onRetry={() => servicesQuery.refetch()} />
-        </main>
-      </div>
-    );
-  }
+  const handleQuickSubmit = (event) => {
+    event.preventDefault();
+    if (!quickForm.name.trim() || !quickForm.phone.trim() || !quickForm.serviceSlug || !quickForm.date) {
+      message.error("Vui lòng nhập đầy đủ thông tin đặt lịch");
+      return;
+    }
+    const normalizedPhone = quickForm.phone.replace(/\D/g, "");
+    if (normalizedPhone.length < 9 || normalizedPhone.length > 11) {
+      message.error("Số điện thoại không hợp lệ");
+      return;
+    }
+    const selectedDate = new Date(quickForm.date);
+    if (!Number.isFinite(selectedDate.getTime()) || selectedDate.getTime() < Date.now()) {
+      message.error("Vui lòng chọn ngày giờ trong tương lai");
+      return;
+    }
+    const selectedService = services.find((item) => item.slug === quickForm.serviceSlug);
+    const serviceName = selectedService?.title || "Dịch vụ chăm sóc";
+    message.success("Đã ghi nhận yêu cầu. Chuyển sang trang liên hệ để xác nhận.");
+    const params = new URLSearchParams({
+      service: serviceName,
+      date: quickForm.date,
+      note: quickForm.note || "",
+    });
+    navigate(`/contact?${params.toString()}`);
+  };
 
   return (
     <div className="services-view">
@@ -105,6 +115,11 @@ const ServicesPage = () => {
         </div>
 
         <section className="hero-box">
+          {servicesQuery.isError ? (
+            <p className="chip" style={{ marginBottom: 12 }}>
+              Không thể tải dữ liệu dịch vụ từ máy chủ, đang hiển thị danh sách mặc định.
+            </p>
+          ) : null}
           <div className="eyebrow">
             <PetshopIcon name="star" size={14} />
             Pet care services
@@ -141,7 +156,21 @@ const ServicesPage = () => {
                   <div className="price">{service.price}</div>
                   <p className="desc">{service.shortDescription}</p>
                   <p className="note"><PetshopIcon name="clock" size={13} />{service.duration} · Còn slot hôm nay</p>
-                  <button type="button" className="btn" onClick={() => navigate(`/services/${service.slug}`)} disabled={!service.slug}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      const petId = searchParams.get("petId");
+                      const petName = searchParams.get("petName");
+                      const petType = searchParams.get("petType");
+                      if (petId) params.set("petId", petId);
+                      if (petName) params.set("petName", petName);
+                      if (petType) params.set("petType", petType);
+                      navigate(`/services/${service.slug}${params.toString() ? `?${params.toString()}` : ""}`);
+                    }}
+                    disabled={!service.slug}
+                  >
                     <PetshopIcon name="eye" size={14} />
                     Xem chi tiết & đặt lịch
                   </button>
@@ -168,17 +197,17 @@ const ServicesPage = () => {
           <aside className="booking-card">
             <h2>Đặt lịch nhanh</h2>
 
-            <form className="mini-form" onSubmit={(event) => event.preventDefault()}>
-              <input type="text" placeholder="Tên của bạn" />
-              <input type="tel" placeholder="Số điện thoại" />
-              <select defaultValue="">
+            <form className="mini-form" onSubmit={handleQuickSubmit}>
+              <input type="text" name="name" placeholder="Tên của bạn" value={quickForm.name} onChange={handleQuickChange} />
+              <input type="tel" name="phone" placeholder="Số điện thoại" value={quickForm.phone} onChange={handleQuickChange} />
+              <select name="serviceSlug" value={quickForm.serviceSlug} onChange={handleQuickChange}>
                 <option value="" disabled>Chọn dịch vụ</option>
                 {services.map((service) => (
                   <option key={service.slug || service.title} value={service.slug || ""}>{service.title}</option>
                 ))}
               </select>
-              <input type="datetime-local" />
-              <textarea placeholder="Ghi chú về thú cưng" />
+              <input type="datetime-local" name="date" value={quickForm.date} onChange={handleQuickChange} />
+              <textarea name="note" placeholder="Ghi chú về thú cưng" value={quickForm.note} onChange={handleQuickChange} />
               <button className="btn" type="submit">
                 <svg viewBox="0 0 24 24" className="send-icon"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
                 Gửi yêu cầu đặt lịch

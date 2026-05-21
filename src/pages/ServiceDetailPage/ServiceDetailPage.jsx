@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
 import { serviceCatalog } from "../../data/serviceCatalog";
 import * as ServiceServices from "../../services/ServiceServices";
+import * as AppointmentServices from "../../services/AppointmentServices";
+import * as PetServices from "../../services/PetServices";
 import { EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
 import * as message from "../../components/Message/Message";
 import "./ServiceDetailPage.css";
@@ -14,30 +17,87 @@ const defaultSteps = [
   { title: "Tư vấn sau dịch vụ", text: "Gợi ý lịch chăm sóc, sản phẩm phù hợp và lưu ý tại nhà." },
 ];
 
+const toDateTimeLocalMin = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hour = pad(date.getHours());
+  const minute = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+};
+
+const getServiceTag = (service = {}) => {
+  const slug = String(service?.slug || "").toLowerCase();
+  if (slug.includes("khach-san")) return "Lưu trú";
+  if (slug.includes("kham") || slug.includes("thu-y")) return "Thú y";
+  if (slug.includes("groom")) return "Grooming";
+  if (slug.includes("spa")) return "Spa";
+  return "Dịch vụ";
+};
+
 const ServiceDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const user = useSelector((state) => state.user);
 
   const detailQuery = useQuery({
     queryKey: ["service-detail", slug],
     queryFn: () => ServiceServices.getServiceBySlug(slug),
     enabled: Boolean(slug),
   });
+  const petsQuery = useQuery({
+    queryKey: ["service-booking-pets", user?.access_token],
+    queryFn: () => PetServices.getMyPets(user.access_token),
+    enabled: Boolean(user?.access_token),
+  });
 
   const service = useMemo(() => {
     const apiService = detailQuery?.data?.data;
     const localService = serviceCatalog.find((item) => item.slug === slug);
     if (!apiService) return localService;
+    const speciesRaw = String(apiService.species || "").toLowerCase();
+    const speciesLabel = speciesRaw === "dog"
+      ? "Chó"
+      : speciesRaw === "cat"
+        ? "Mèo"
+        : localService?.species || "Chó / Mèo";
+    const resolvedPrice = Number(apiService.salePrice > 0 ? apiService.salePrice : apiService.price || 0);
+    const localPriceSuffix = String(localService?.price || "").includes("/ đêm") ? " / đêm" : "";
+    const priceLabel = resolvedPrice > 0
+      ? `Từ ${resolvedPrice.toLocaleString("vi-VN")}đ${localPriceSuffix}`
+      : localService?.price || "Liên hệ";
+    const durationLabel = Number(apiService.durationMin || 0) > 0
+      ? `${Number(apiService.durationMin)} phút`
+      : localService?.duration || "Đang cập nhật";
+    const resolvedIncludes = Array.isArray(apiService.includes)
+      ? apiService.includes
+          .map((item) => (typeof item === "string" ? item.trim() : String(item?.name || "").trim()))
+          .filter(Boolean)
+      : localService?.includes || [];
+    const resolvedSubServices = Array.isArray(apiService.subServices) && apiService.subServices.length > 0
+      ? apiService.subServices
+          .map((item) => ({
+            name: String(item?.name || "").trim(),
+            price: String(item?.price || "").trim(),
+            duration: String(item?.duration || "").trim(),
+          }))
+          .filter((item) => item.name)
+      : localService?.subServices || [];
+
     return {
-      slug: apiService.slug,
-      title: apiService.name,
-      price: `Từ ${Number(apiService.salePrice > 0 ? apiService.salePrice : apiService.price || 0).toLocaleString("vi-VN")}đ`,
+      _id: apiService._id || "",
+      slug: apiService.slug || localService?.slug || slug,
+      title: apiService.name || localService?.title || "Dịch vụ",
+      price: priceLabel,
       image: apiService.image || localService?.image || "/service-images/service-spa-thu-cung.jpg",
       shortDescription: apiService.description || localService?.shortDescription || "",
       description: apiService.description || localService?.description || "",
-      duration: `${Number(apiService.durationMin || 60)} phút`,
-      species: apiService.species === "dog" ? "Chó" : apiService.species === "cat" ? "Mèo" : "Chó / Mèo",
-      includes: Array.isArray(apiService.includes) ? apiService.includes : localService?.includes || [],
+      duration: durationLabel,
+      species: speciesLabel,
+      includes: resolvedIncludes,
+      subServices: resolvedSubServices,
     };
   }, [detailQuery?.data?.data, slug]);
 
@@ -45,12 +105,48 @@ const ServiceDetailPage = () => {
     name: "",
     phone: "",
     petType: "dog",
+    petName: "",
     petSize: "small",
     date: "",
     note: "",
   });
+  const [selectedPetId, setSelectedPetId] = useState("");
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: ({ payload, accessToken }) => AppointmentServices.createAppointment(payload, accessToken),
+  });
 
   const includes = useMemo(() => service?.includes || [], [service]);
+  const subServices = useMemo(() => service?.subServices || [], [service]);
+  const myPets = useMemo(() => petsQuery.data?.data || [], [petsQuery.data?.data]);
+
+  useEffect(() => {
+    const prefillPetId = searchParams.get("petId");
+    const prefillPetName = searchParams.get("petName");
+    const prefillPetType = searchParams.get("petType");
+    if (prefillPetId) {
+      setSelectedPetId(prefillPetId);
+    }
+    if (prefillPetName || prefillPetType) {
+      setFormData((prev) => ({
+        ...prev,
+        petName: prefillPetName || prev.petName,
+        petType: prefillPetType === "cat" ? "cat" : prefillPetType === "dog" ? "dog" : prev.petType,
+      }));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!selectedPetId || !myPets.length) return;
+    const pet = myPets.find((item) => item._id === selectedPetId);
+    if (!pet) return;
+    setFormData((prev) => ({
+      ...prev,
+      petName: pet.name || prev.petName,
+      petType: pet.species === "cat" ? "cat" : pet.species === "dog" ? "dog" : prev.petType,
+      note: prev.note || pet.notes || "",
+    }));
+  }, [selectedPetId, myPets]);
 
   if (detailQuery.isLoading && !service) {
     return (
@@ -87,14 +183,101 @@ const ServiceDetailPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handlePetSelect = (event) => {
+    const nextPetId = event.target.value;
+    setSelectedPetId(nextPetId);
+    if (!nextPetId) {
+      setFormData((prev) => ({ ...prev, petName: "", petType: "dog" }));
+      return;
+    }
+    const pet = myPets.find((item) => item._id === nextPetId);
+    if (!pet) return;
+    setFormData((prev) => ({
+      ...prev,
+      petName: pet.name || prev.petName,
+      petType: pet.species === "cat" ? "cat" : pet.species === "dog" ? "dog" : prev.petType,
+      note: prev.note || pet.notes || "",
+    }));
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!formData.name.trim() || !formData.phone.trim() || !formData.date) {
       message.error("Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Ngày đặt lịch");
       return;
     }
-    message.success("Đặt lịch thành công. petshop sẽ liên hệ xác nhận trong 30 phút.");
-    navigate(`/contact?service=${encodeURIComponent(service.title)}&date=${encodeURIComponent(formData.date)}`);
+    if (!selectedPetId && !formData.petName.trim()) {
+      message.error("Vui lòng chọn thú cưng hoặc nhập tên thú cưng mới");
+      return;
+    }
+    const normalizedPhone = formData.phone.replace(/\D/g, "");
+    if (normalizedPhone.length < 9 || normalizedPhone.length > 11) {
+      message.error("Số điện thoại không hợp lệ");
+      return;
+    }
+    const selectedDate = new Date(formData.date);
+    if (!Number.isFinite(selectedDate.getTime()) || selectedDate.getTime() < Date.now()) {
+      message.error("Vui lòng chọn ngày giờ trong tương lai");
+      return;
+    }
+    if (!user?.access_token || !user?.id) {
+      message.error("Vui lòng đăng nhập để đặt lịch dịch vụ");
+      navigate("/sign-in");
+      return;
+    }
+    if (!service?._id) {
+      message.error("Dịch vụ này chưa đồng bộ DB, chuyển sang trang liên hệ để xác nhận thủ công");
+      const params = new URLSearchParams({
+        service: service.title,
+        date: formData.date,
+        petType: formData.petType,
+        petSize: formData.petSize,
+        note: formData.note || "",
+      });
+      navigate(`/contact?${params.toString()}`);
+      return;
+    }
+    try {
+      const payload = {
+        petId: selectedPetId || undefined,
+        petName: selectedPetId ? undefined : formData.petName.trim(),
+        petSpecies: selectedPetId ? undefined : formData.petType,
+        serviceIds: [service._id],
+        scheduleAt: selectedDate.toISOString(),
+        customerNote: formData.note?.trim() || `Kích thước: ${formData.petSize}`,
+      };
+      const res = await createAppointmentMutation.mutateAsync({ payload, accessToken: user.access_token });
+      if (res?.status !== "OK") {
+        throw new Error(res?.message || "Không thể đặt lịch");
+      }
+      message.success("Đặt lịch thành công. petshop sẽ liên hệ xác nhận sớm.");
+      setFormData({
+        name: "",
+        phone: "",
+        petType: "dog",
+        petName: "",
+        petSize: "small",
+        date: "",
+        note: "",
+      });
+      setSelectedPetId("");
+      navigate("/my-appointments", {
+        state: {
+          highlightAppointmentId: res?.data?._id || "",
+        },
+      });
+      return;
+    } catch (error) {
+      message.error(error?.message || "Không thể đặt lịch");
+    }
+    const params = new URLSearchParams({
+      service: service.title,
+      date: formData.date,
+      petType: formData.petType,
+      petSize: formData.petSize,
+      note: formData.note || "",
+    });
+    navigate(`/contact?${params.toString()}`);
   };
 
   return (
@@ -111,7 +294,7 @@ const ServiceDetailPage = () => {
         <div className="layout">
           <section className="card">
             <div className="service-image-box">
-              <span className="service-tag"><PetshopIcon name="tag" size={13} />Chăm sóc</span>
+              <span className="service-tag"><PetshopIcon name="tag" size={13} />{getServiceTag(service)}</span>
               <img className="service-image" src={service.image} alt={service.title} />
             </div>
 
@@ -152,6 +335,27 @@ const ServiceDetailPage = () => {
               )) : <p><PetshopIcon name="check" size={13} />Nội dung gói dịch vụ đang cập nhật.</p>}
             </div>
 
+            <h2 className="section-title">Gói dịch vụ chi tiết</h2>
+            <div className="subservice-list">
+              {subServices.length ? subServices.map((item, index) => (
+                <div className="subservice-item" key={`${item.name}-${index}`}>
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p><PetshopIcon name="clock" size={13} />{item.duration}</p>
+                  </div>
+                  <strong>{item.price}</strong>
+                </div>
+              )) : (
+                <div className="subservice-item">
+                  <div>
+                    <h3>Đang cập nhật</h3>
+                    <p><PetshopIcon name="clock" size={13} />Thông tin gói nhỏ sẽ được cập nhật sớm.</p>
+                  </div>
+                  <strong>Liên hệ</strong>
+                </div>
+              )}
+            </div>
+
             <h2 className="section-title">Quy trình thực hiện</h2>
             <div className="timeline">
               {defaultSteps.map((step, index) => (
@@ -184,7 +388,7 @@ const ServiceDetailPage = () => {
               <div className="form-row">
                 <div className="field">
                   <label>* Loại thú cưng</label>
-                  <select name="petType" value={formData.petType} onChange={handleChange}>
+                  <select name="petType" value={formData.petType} onChange={handleChange} disabled={Boolean(selectedPetId)}>
                     <option value="dog">Chó</option>
                     <option value="cat">Mèo</option>
                   </select>
@@ -200,9 +404,35 @@ const ServiceDetailPage = () => {
                 </div>
               </div>
 
+              {myPets.length > 0 ? (
+                <div className="field">
+                  <label>Chọn thú cưng đã lưu</label>
+                  <select value={selectedPetId} onChange={handlePetSelect}>
+                    <option value="">Thêm thú cưng mới</option>
+                    {myPets.map((pet) => (
+                      <option key={pet._id} value={pet._id}>
+                        {pet.name} ({pet.species === "cat" ? "Mèo" : pet.species === "dog" ? "Chó" : "Khác"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              <div className="field">
+                <label>{selectedPetId ? "Tên thú cưng" : "* Tên thú cưng"}</label>
+                <input
+                  name="petName"
+                  value={formData.petName}
+                  onChange={handleChange}
+                  type="text"
+                  placeholder="Nhập tên thú cưng"
+                  disabled={Boolean(selectedPetId)}
+                />
+              </div>
+
               <div className="field">
                 <label>* Ngày đặt lịch</label>
-                <input name="date" value={formData.date} onChange={handleChange} type="datetime-local" />
+                <input name="date" value={formData.date} onChange={handleChange} type="datetime-local" min={toDateTimeLocalMin()} />
               </div>
 
               <div className="field">
@@ -210,7 +440,10 @@ const ServiceDetailPage = () => {
                 <textarea name="note" value={formData.note} onChange={handleChange} placeholder="Tình trạng thú cưng hoặc yêu cầu thêm" />
               </div>
 
-              <button className="btn" type="submit"><PetshopIcon name="check" size={13} />Xác nhận đặt lịch</button>
+              <button className="btn" type="submit" disabled={createAppointmentMutation.isPending}>
+                <PetshopIcon name="check" size={13} />
+                {createAppointmentMutation.isPending ? "Đang gửi lịch..." : "Xác nhận đặt lịch"}
+              </button>
             </form>
 
             <div className="support-box">

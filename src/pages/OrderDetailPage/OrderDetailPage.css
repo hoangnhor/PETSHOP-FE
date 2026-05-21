@@ -23,3 +23,5 @@
 @media (max-width: 1180px) { .order-detail-view .container { width: calc(100% - 40px); } }
 @media (max-width: 900px) { .order-detail-view .container { width: calc(100% - 32px); } .order-detail-view .detail-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .order-detail-view .page-title { font-size: 40px; } .order-detail-view .breadcrumb { border-radius: 16px; align-items: flex-start; flex-wrap: wrap; } }
+@media (max-width: 768px) { .order-detail-view .page { padding: 20px 0 44px; } .order-detail-view .page-title { font-size: 38px; } .order-detail-view .card { padding: 16px; } }
+@media (max-width: 390px) { .order-detail-view .container { width: calc(100% - 20px); } .order-detail-view .page-title { font-size: 34px; } }

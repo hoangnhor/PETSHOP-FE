@@ -39,6 +39,16 @@ const normalizeSpecies = (value = "") => {
   return "other";
 };
 
+const isCareGroupProduct = (item = {}) => {
+  const text = normalizeText(`${item?.name || ""} ${item?.type?.name || ""} ${item?.category || ""}`);
+  return text.includes("cham soc") || text.includes("groom") || text.includes("ve sinh") || text.includes("sua tam") || text.includes("luoc");
+};
+
+const isHealthGroupProduct = (item = {}) => {
+  const text = normalizeText(`${item?.name || ""} ${item?.type?.name || ""} ${item?.category || ""}`);
+  return text.includes("suc khoe") || text.includes("vitamin") || text.includes("thu y") || text.includes("y te") || text.includes("bo sung");
+};
+
 const getProductTypeId = (product) => String(product?.type?._id || product?.type || "");
 
 const getFinalPrice = (product) => {
@@ -101,6 +111,8 @@ const ProductsPage = () => {
   const isSearchPage = location.pathname === "/search";
   const routeKeyword = (searchParams.get("keyword") || "").trim();
   const typeFromQuery = searchParams.get("type") || "";
+  const speciesFromQuery = searchParams.get("species") || "";
+  const groupFromQuery = searchParams.get("group") || "";
 
   const catalogNode = useMemo(() => {
     if (!speciesSlug || !typeSlug || !subSlug) return null;
@@ -108,7 +120,9 @@ const ProductsPage = () => {
   }, [speciesSlug, typeSlug, subSlug]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [speciesFilter, setSpeciesFilter] = useState("all");
+  const [speciesFilter, setSpeciesFilter] = useState(
+    speciesFromQuery === "dog" || speciesFromQuery === "cat" ? speciesFromQuery : "all"
+  );
   const [selectedTypeId, setSelectedTypeId] = useState(typeFromQuery || "all");
   const [priceRange, setPriceRange] = useState("all");
   const [onlyInStock, setOnlyInStock] = useState(false);
@@ -226,6 +240,14 @@ const ProductsPage = () => {
   }, [typeFromQuery]);
 
   useEffect(() => {
+    if (speciesFromQuery === "dog" || speciesFromQuery === "cat") {
+      setSpeciesFilter(speciesFromQuery);
+      return;
+    }
+    setSpeciesFilter("all");
+  }, [speciesFromQuery]);
+
+  useEffect(() => {
     setWideKeyword(routeKeyword);
   }, [routeKeyword]);
 
@@ -245,21 +267,31 @@ const ProductsPage = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
+    if (!wishlistQuery.isSuccess) return;
+    if (wishlistQuery?.data?.status && wishlistQuery.data.status !== "OK") return;
     const serverItems = wishlistQuery.data?.data?.productIds || [];
-    const mappedIds = serverItems.map((item) => String(item?._id || "")).filter(Boolean);
+    const mappedIds = serverItems
+      .map((item) => (typeof item === "string" ? item : String(item?._id || "")))
+      .filter(Boolean);
     setWishlistIds(mappedIds);
-    const localMapped = serverItems.map((item) => ({
-      idsp: item._id,
-      name: item.name,
-      image: firstImage(item.image),
-      price: item.price,
-      discount: item.discount || 0,
-      countInStock: item.countInStock,
-      category: item?.type?.name || "Sản phẩm",
-    }));
+    const currentLocal = readLocalArray("wishlistItems");
+    const localMappedFromObjects = serverItems
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        idsp: item._id,
+        name: item.name,
+        image: firstImage(item.image),
+        price: item.price,
+        discount: item.discount || 0,
+        countInStock: item.countInStock,
+        category: item?.type?.name || "Sản phẩm",
+      }));
+    const localMapped = localMappedFromObjects.length
+      ? localMappedFromObjects
+      : currentLocal.filter((item) => mappedIds.includes(String(item?.idsp || "")));
     localStorage.setItem("wishlistItems", JSON.stringify(localMapped));
     window.dispatchEvent(new Event("wishlist-updated"));
-  }, [isLoggedIn, wishlistQuery.data]);
+  }, [isLoggedIn, wishlistQuery.isSuccess, wishlistQuery.data]);
 
   useEffect(() => {
     if (!catalogNode) return;
@@ -306,6 +338,12 @@ const ProductsPage = () => {
           `${item?.name || ""} ${item?.description || ""}`
         ) === speciesFilter;
       });
+    }
+
+    if (groupFromQuery === "care") {
+      working = working.filter((item) => isCareGroupProduct(item));
+    } else if (groupFromQuery === "health") {
+      working = working.filter((item) => isHealthGroupProduct(item));
     }
 
     if (priceRange !== "all") {
@@ -360,6 +398,7 @@ const ProductsPage = () => {
     typeIdToSpecies,
     wideKeyword,
     sortBy,
+    groupFromQuery,
   ]);
 
   const activeFilterCount = useMemo(() => {
@@ -393,6 +432,7 @@ const ProductsPage = () => {
     setSelectedTypeId(nextId);
 
     const params = new URLSearchParams(searchParams);
+    params.delete("group");
     if (nextId === "all") params.delete("type");
     else params.set("type", nextId);
 
@@ -400,8 +440,22 @@ const ProductsPage = () => {
     navigate(`${location.pathname}${search ? `?${search}` : ""}`);
   };
 
+  const handleSpeciesFilterChange = (nextSpecies) => {
+    setSpeciesFilter(nextSpecies);
+    const params = new URLSearchParams(searchParams);
+    params.delete("group");
+    if (nextSpecies === "all") params.delete("species");
+    else params.set("species", nextSpecies);
+    const search = params.toString();
+    navigate(`${location.pathname}${search ? `?${search}` : ""}`);
+  };
+
   const handleToggleWishlist = async (event, product) => {
     event.stopPropagation();
+    if (!product?._id) {
+      message.error("Không thể thao tác với sản phẩm này");
+      return;
+    }
     const items = readLocalArray("wishlistItems");
     const existed = items.some((item) => item.idsp === product._id);
     const nextItems = existed
@@ -440,6 +494,10 @@ const ProductsPage = () => {
 
   const handleAddCart = async (event, product) => {
     event.stopPropagation();
+    if (!product?._id) {
+      message.error("Không thể thêm sản phẩm này vào giỏ");
+      return;
+    }
     const stock = Number(product?.countInStock || 0);
     if (stock <= 0) {
       message.warning("Sản phẩm đã hết hàng");
@@ -447,6 +505,11 @@ const ProductsPage = () => {
     }
     const items = readLocalArray("cartItems");
     const existed = items.find((item) => item.idsp === product._id);
+    const currentQuantity = Number(existed?.quantity || 0);
+    if (currentQuantity >= stock) {
+      message.warning("Số lượng trong giỏ đã đạt tồn kho tối đa");
+      return;
+    }
     const nextItems = existed
       ? items.map((item) =>
           item.idsp === product._id
@@ -499,6 +562,8 @@ const ProductsPage = () => {
 
     const params = new URLSearchParams(searchParams);
     params.delete("type");
+    params.delete("species");
+    params.delete("group");
     const search = params.toString();
     navigate(`${location.pathname}${search ? `?${search}` : ""}`);
   };
@@ -518,15 +583,15 @@ const ProductsPage = () => {
               Loại
             </div>
 
-            <button type="button" className="radio-line" onClick={() => setSpeciesFilter("all")}>
+            <button type="button" className="radio-line" onClick={() => handleSpeciesFilterChange("all")}>
               <span className={`radio ${speciesFilter === "all" ? "active" : ""}`} />
               Tất cả
             </button>
-            <button type="button" className="radio-line" onClick={() => setSpeciesFilter("dog")}>
+            <button type="button" className="radio-line" onClick={() => handleSpeciesFilterChange("dog")}>
               <span className={`radio ${speciesFilter === "dog" ? "active" : ""}`} />
               Chó
             </button>
-            <button type="button" className="radio-line" onClick={() => setSpeciesFilter("cat")}>
+            <button type="button" className="radio-line" onClick={() => handleSpeciesFilterChange("cat")}>
               <span className={`radio ${speciesFilter === "cat" ? "active" : ""}`} />
               Mèo
             </button>
@@ -625,7 +690,7 @@ const ProductsPage = () => {
             <>
               {currentProducts.length > 0 ? (
                 <div className="grid">
-                  {currentProducts.map((product) => {
+                  {currentProducts.map((product, index) => {
                     const discount = Number(product?.discount || 0);
                     const finalPrice = getFinalPrice(product);
                     const basePrice = Number(product?.price || 0);
@@ -635,7 +700,7 @@ const ProductsPage = () => {
                     const filledStars = Math.round(rating);
 
                     return (
-                      <article className="product" key={product._id}>
+                      <article className="product" key={product._id || `product-${index}`}>
                         <button className="heart" type="button" aria-label="Thêm vào yêu thích" onClick={(event) => handleToggleWishlist(event, product)}>
                           <PetshopIcon name="heart" size={16} className={isFavorite ? "is-favorite" : ""} />
                         </button>
@@ -675,7 +740,7 @@ const ProductsPage = () => {
                               <PetshopIcon name="cart" size={16} />
                               {inStock ? "Thêm vào giỏ" : "Hết hàng"}
                             </button>
-                            <button className="quick" type="button" aria-label="Xem chi tiết" onClick={(event) => { event.stopPropagation(); navigate(`/product-detail/${product._id}`); }}>
+                            <button className="quick" type="button" aria-label="Xem chi tiết" onClick={(event) => { event.stopPropagation(); if (!product?._id) return; navigate(`/product-detail/${product._id}`); }}>
                               <PetshopIcon name="eye" size={16} />
                             </button>
                           </div>

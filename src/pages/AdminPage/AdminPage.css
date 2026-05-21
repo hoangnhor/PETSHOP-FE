@@ -1,6 +1,6 @@
 .admin-parity {
-  width: min(1180px, calc(100% - 32px));
-  margin: 34px auto 70px;
+  width: min(1240px, calc(100% - 20px));
+  margin: 34px 0 70px 10px;
 }
 
 .admin-parity .admin-layout {
@@ -138,6 +138,11 @@
   color: #fff !important;
 }
 
+.admin-parity .admin-back-home {
+  width: 100%;
+  margin: 0 0 10px;
+}
+
 .admin-parity .admin-category-create {
   display: flex;
   gap: 10px;
@@ -238,5 +243,48 @@
 
   .admin-parity .admin-content {
     padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-parity {
+    width: calc(100% - 16px);
+    margin: 18px 0 40px 8px;
+  }
+
+  .admin-parity .admin-panel-title {
+    font-size: 34px;
+  }
+
+  .admin-parity .admin-toolbar-end,
+  .admin-parity .admin-filters {
+    width: 100%;
+  }
+
+  .admin-parity .admin-toolbar-end > * ,
+  .admin-parity .admin-filters > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-parity {
+    width: calc(100% - 10px);
+    margin-left: 5px;
+  }
+
+  .admin-parity .admin-content,
+  .admin-parity .admin-sidebar {
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .admin-parity .admin-panel-title {
+    font-size: 30px;
+  }
+
+  .admin-parity .ant-table-wrapper .ant-table {
+    min-width: 820px;
   }
 }

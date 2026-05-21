@@ -20,6 +20,8 @@ import SearchResultsPage from "../pages/SearchResultsPage/SearchResultsPage";
 import AuthRedirectPage from "../pages/AuthRedirectPage/AuthRedirectPage";
 import StyleGuidePage from "../pages/StyleGuidePage/StyleGuidePage";
 import UiStatesPage from "../pages/UiStatesPage/UiStatesPage";
+import MyAppointmentsPage from "../pages/MyAppointmentsPage/MyAppointmentsPage";
+import MyPetsPage from "../pages/MyPetsPage/MyPetsPage";
 
 export const routes = [
   { path: "/", page: HomePage, isShowHeader: true },
@@ -43,8 +45,10 @@ export const routes = [
   { path: "/policies", page: PolicyPage, isShowHeader: true },
   { path: "/product-detail/:id", page: ProductDetailsPage, isShowHeader: true },
   { path: "/profile", page: ProfilePage, isShowHeader: true, isPrivate: true },
-  { path: "/wishlist", page: WishlistPage, isShowHeader: true, isPrivate: true },
+  { path: "/wishlist", page: WishlistPage, isShowHeader: true },
   { path: "/order-history", page: OrderHistoryPage, isShowHeader: true, isPrivate: true },
+  { path: "/my-appointments", page: MyAppointmentsPage, isShowHeader: true, isPrivate: true },
+  { path: "/my-pets", page: MyPetsPage, isShowHeader: true, isPrivate: true },
   { path: "/order-detail/:id", page: OrderDetailPage, isShowHeader: true, isPrivate: true },
   { path: "/admin", page: AdminPage, isShowHeader: false, isPrivate: true, isAdmin: true },
   { path: "*", page: NotFoundPage }

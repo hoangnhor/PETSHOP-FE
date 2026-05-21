@@ -63,9 +63,6 @@ const buildPrioritizedList = (products = [], take = 0) => {
   return [...discounted, ...fallback].slice(0, take);
 };
 
-const pickNonDiscounted = (products = [], take = 0) =>
-  products.filter((item) => Number(item?.discount || 0) <= 0).slice(0, take);
-
 const pickBestSellers = (products = [], take = 4) =>
   (() => {
     const nonDiscount = products.filter((item) => Number(item?.discount || 0) <= 0);
@@ -83,22 +80,33 @@ const removeAccent = (value = "") =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+const normalizeText = (value = "") => removeAccent(value).replace(/[^a-z0-9]+/g, " ").trim();
+
 const hasCatMarkers = (product = {}) => {
   const typeObj = product?.type && typeof product.type === "object" ? product.type : null;
   const speciesRaw = removeAccent(typeObj?.species || "");
   if (speciesRaw === "cat" || speciesRaw === "meo") return true;
 
-  const haystack = [
+  const haystack = normalizeText([
     typeObj?.slug,
     typeObj?.name,
     product?.name,
     product?.description,
     product?.category,
   ]
-    .map((value) => removeAccent(value || ""))
-    .join(" ");
+    .map((value) => value || "")
+    .join(" "));
 
-  return haystack.includes("cat") || haystack.includes("meo");
+  return (
+    haystack.includes(" cat ") ||
+    haystack.startsWith("cat ") ||
+    haystack.endsWith(" cat") ||
+    haystack.includes(" meo ") ||
+    haystack.startsWith("meo ") ||
+    haystack.endsWith(" meo") ||
+    haystack.includes("cho meo") ||
+    haystack.includes("for cat")
+  );
 };
 
 const hasDogMarkers = (product = {}) => {
@@ -106,17 +114,26 @@ const hasDogMarkers = (product = {}) => {
   const speciesRaw = removeAccent(typeObj?.species || "");
   if (speciesRaw === "dog" || speciesRaw === "cho") return true;
 
-  const haystack = [
+  const haystack = normalizeText([
     typeObj?.slug,
     typeObj?.name,
     product?.name,
     product?.description,
     product?.category,
   ]
-    .map((value) => removeAccent(value || ""))
-    .join(" ");
+    .map((value) => value || "")
+    .join(" "));
 
-  return haystack.includes("dog") || haystack.includes("cho") || haystack.includes("cun");
+  return (
+    haystack.includes(" dog ") ||
+    haystack.startsWith("dog ") ||
+    haystack.endsWith(" dog") ||
+    haystack.includes(" cun ") ||
+    haystack.startsWith("cun ") ||
+    haystack.endsWith(" cun") ||
+    haystack.includes("cho cho") ||
+    haystack.includes("for dog")
+  );
 };
 
 const getProductTypeId = (product = {}) => String(product?.type?._id || product?.type || "");
@@ -190,9 +207,26 @@ const HomePage = () => {
   );
   const types = useMemo(() => typesQuery?.data?.data || [], [typesQuery?.data?.data]);
   const flashProducts = useMemo(() => buildPrioritizedList(products, 4), [products]);
-  const collectionProducts = useMemo(() => pickNonDiscounted(products, 24), [products]);
+  const collectionProducts = useMemo(() => products.slice(0, 120), [products]);
   const bestSellerProducts = useMemo(() => pickBestSellers(products, 4), [products]);
   const previewServices = useMemo(() => serviceCatalog.slice(0, 3), []);
+  const servicePreviewMeta = {
+    "spa-thu-cung": {
+      title: "Tắm spa",
+      desc: "Làm sạch, khử mùi, dưỡng lông mềm mượt với sản phẩm dịu nhẹ.",
+      icon: <svg viewBox="0 0 24 24" className="service-svg"><path d="M4 14h16"></path><path d="M6 14v2a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2"></path><path d="M7 10c0-1.1.9-2 2-2"></path><path d="M12 8c0-1.1.9-2 2-2"></path><path d="M15 10c0-1.1.9-2 2-2"></path></svg>,
+    },
+    "grooming-cat-tia-long": {
+      title: "Cắt tỉa lông",
+      desc: "Tạo kiểu gọn gàng, phù hợp thời tiết và giống thú cưng.",
+      icon: <svg viewBox="0 0 24 24" className="service-svg"><circle cx="6" cy="7" r="3"></circle><circle cx="6" cy="17" r="3"></circle><path d="M8.5 8.5L20 20"></path><path d="M8.5 15.5L20 4"></path></svg>,
+    },
+    "kham-suc-khoe-thu-y": {
+      title: "Tư vấn chăm sóc",
+      desc: "Gợi ý thức ăn, vitamin và phụ kiện theo độ tuổi, cân nặng.",
+      icon: <svg viewBox="0 0 24 24" className="service-svg"><path d="M4 5h16v11H8l-4 4V5z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>,
+    },
+  };
   const heroImage = HERO_FALLBACK_IMAGE;
 
   useEffect(() => {
@@ -244,21 +278,31 @@ const HomePage = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
+    if (!wishlistQuery.isSuccess) return;
+    if (wishlistQuery?.data?.status && wishlistQuery.data.status !== "OK") return;
     const serverItems = wishlistQuery.data?.data?.productIds || [];
-    const mapped = serverItems.map((item) => String(item?._id || "")).filter(Boolean);
+    const mapped = serverItems
+      .map((item) => (typeof item === "string" ? item : String(item?._id || "")))
+      .filter(Boolean);
     setWishlistIds(mapped);
-    const localMapped = serverItems.map((item) => ({
-      idsp: item._id,
-      name: item.name,
-      image: firstImage(item.image),
-      price: item.price,
-      discount: item.discount || 0,
-      countInStock: item.countInStock,
-      category: item?.type?.name || "Sản phẩm",
-    }));
+    const currentLocal = readLocal("wishlistItems");
+    const localMappedFromObjects = serverItems
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        idsp: item._id,
+        name: item.name,
+        image: firstImage(item.image),
+        price: item.price,
+        discount: item.discount || 0,
+        countInStock: item.countInStock,
+        category: item?.type?.name || "Sản phẩm",
+      }));
+    const localMapped = localMappedFromObjects.length
+      ? localMappedFromObjects
+      : currentLocal.filter((item) => mapped.includes(String(item?.idsp || "")));
     localStorage.setItem("wishlistItems", JSON.stringify(localMapped));
     window.dispatchEvent(new Event("wishlist-updated"));
-  }, [isLoggedIn, wishlistQuery.data]);
+  }, [isLoggedIn, wishlistQuery.isSuccess, wishlistQuery.data]);
 
   const filteredCollectionProducts = useMemo(() => {
     const base = collectionProducts;
@@ -286,6 +330,10 @@ const HomePage = () => {
 
   const onToggleWishlist = async (event, product) => {
     event.stopPropagation();
+    if (!product?._id) {
+      message.error("Không thể thao tác với sản phẩm này");
+      return;
+    }
     const wishlistItems = readLocal("wishlistItems");
     const existed = wishlistItems.some((item) => item.idsp === product._id);
     const nextItems = existed
@@ -313,6 +361,10 @@ const HomePage = () => {
 
   const onAddCart = async (event, product) => {
     event.stopPropagation();
+    if (!product?._id) {
+      message.error("Không thể thêm sản phẩm này vào giỏ");
+      return;
+    }
     const stock = Number(product?.countInStock || 0);
     if (stock <= 0) {
       message.warning("Sản phẩm đã hết hàng");
@@ -320,6 +372,11 @@ const HomePage = () => {
     }
     const cartItems = readLocal("cartItems");
     const existed = cartItems.find((item) => item.idsp === product._id);
+    const currentQuantity = Number(existed?.quantity || 0);
+    if (currentQuantity >= stock) {
+      message.warning("Số lượng trong giỏ đã đạt tồn kho tối đa");
+      return;
+    }
     const nextItems = existed
       ? cartItems.map((item) => (item.idsp === product._id ? { ...item, quantity: Math.min(Number(item.quantity || 1) + 1, stock) } : item))
       : [...cartItems, { idsp: product._id, name: product.name, image: firstImage(product.image), price: product.price, discount: product.discount || 0, countInStock: stock, quantity: 1, category: product?.type?.name }];
@@ -346,7 +403,24 @@ const HomePage = () => {
   };
 
   const handleCategoryNavigate = (keyword) => {
-    navigate(`/search?keyword=${encodeURIComponent(keyword)}`);
+    const normalized = removeAccent(keyword);
+    if (normalized === "cho") {
+      navigate("/products?species=dog");
+      return;
+    }
+    if (normalized === "meo") {
+      navigate("/products?species=cat");
+      return;
+    }
+    if (normalized.includes("cham soc")) {
+      navigate("/products?group=care");
+      return;
+    }
+    if (normalized.includes("suc khoe")) {
+      navigate("/products?group=health");
+      return;
+    }
+    navigate(`/products?keyword=${encodeURIComponent(keyword)}`);
   };
 
   const renderProductCard = (product, keyPrefix = "p", options = {}) => {
@@ -407,7 +481,7 @@ const HomePage = () => {
               <PetshopIcon name="cart" size={16} />
               {Number(product?.countInStock || 0) <= 0 ? "Hết hàng" : "Thêm vào giỏ"}
             </button>
-            <button type="button" className="quick" aria-label="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/product-detail/${product._id}`); }}><PetshopIcon name="eye" size={16} /></button>
+            <button type="button" className="quick" aria-label="Xem chi tiết" onClick={(e) => { e.stopPropagation(); if (!product?._id) return; navigate(`/product-detail/${product._id}`); }}><PetshopIcon name="eye" size={16} /></button>
           </div>
         </div>
       </article>
@@ -580,19 +654,13 @@ const HomePage = () => {
               <img src="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=900&auto=format&fit=crop" alt="Dịch vụ chăm sóc thú cưng" />
             </div>
             <div className="service-list">
-              {previewServices.map((service, idx) => (
+              {previewServices.map((service) => (
                 <article className="service-item" key={service.slug} onClick={() => navigate(`/services/${service.slug}`)}>
                   <h4>
-                    {idx === 0 ? (
-                      <svg viewBox="0 0 24 24" className="service-svg"><path d="M4 14h16"></path><path d="M6 14v2a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2"></path><path d="M7 10c0-1.1.9-2 2-2"></path><path d="M12 8c0-1.1.9-2 2-2"></path><path d="M15 10c0-1.1.9-2 2-2"></path></svg>
-                    ) : idx === 1 ? (
-                      <svg viewBox="0 0 24 24" className="service-svg"><circle cx="6" cy="7" r="3"></circle><circle cx="6" cy="17" r="3"></circle><path d="M8.5 8.5L20 20"></path><path d="M8.5 15.5L20 4"></path></svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" className="service-svg"><path d="M4 5h16v11H8l-4 4V5z"></path><path d="M8 9h8"></path><path d="M8 13h5"></path></svg>
-                    )}
-                    {idx === 0 ? "Tắm spa" : idx === 1 ? "Cắt tỉa lông" : "Tư vấn chăm sóc"}
+                    {servicePreviewMeta[service.slug]?.icon || <PetshopIcon name="check" size={16} className="service-svg" />}
+                    {servicePreviewMeta[service.slug]?.title || service.title}
                   </h4>
-                  <p>{idx === 0 ? "Làm sạch, khử mùi, dưỡng lông mềm mượt với sản phẩm dịu nhẹ." : idx === 1 ? "Tạo kiểu gọn gàng, phù hợp thời tiết và giống thú cưng." : "Gợi ý thức ăn, vitamin và phụ kiện theo độ tuổi, cân nặng."}</p>
+                  <p>{servicePreviewMeta[service.slug]?.desc || service.shortDescription}</p>
                 </article>
               ))}
             </div>

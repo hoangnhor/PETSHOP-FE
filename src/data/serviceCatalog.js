@@ -10,6 +10,11 @@ export const serviceCatalog = [
     duration: "45 - 60 phút",
     species: "Chó / Mèo",
     includes: ["Tắm gội", "Sấy khô", "Vệ sinh tai cơ bản"],
+    subServices: [
+      { name: "Tắm cơ bản", price: "199.000đ", duration: "45 phút" },
+      { name: "Spa dưỡng lông", price: "259.000đ", duration: "60 phút" },
+      { name: "Khử mùi chuyên sâu", price: "279.000đ", duration: "60 phút" },
+    ],
   },
   {
     slug: "grooming-cat-tia-long",
@@ -22,6 +27,11 @@ export const serviceCatalog = [
     duration: "60 - 90 phút",
     species: "Chó",
     includes: ["Cắt tỉa theo form", "Tỉa vệ sinh chân/bụng", "Chỉnh gọn mặt"],
+    subServices: [
+      { name: "Cắt tỉa cơ bản", price: "299.000đ", duration: "60 phút" },
+      { name: "Tạo kiểu theo giống", price: "359.000đ", duration: "75 phút" },
+      { name: "Gỡ rối + cắt form", price: "389.000đ", duration: "90 phút" },
+    ],
   },
   {
     slug: "kham-suc-khoe-thu-y",
@@ -34,6 +44,11 @@ export const serviceCatalog = [
     duration: "30 - 45 phút",
     species: "Chó / Mèo",
     includes: ["Khám lâm sàng", "Tư vấn dinh dưỡng cơ bản", "Định hướng theo dõi sức khỏe"],
+    subServices: [
+      { name: "Khám tổng quát", price: "249.000đ", duration: "30 phút" },
+      { name: "Khám + tư vấn dinh dưỡng", price: "299.000đ", duration: "40 phút" },
+      { name: "Khám định kỳ chuyên sâu", price: "349.000đ", duration: "45 phút" },
+    ],
   },
   {
     slug: "khach-san-thu-cung",
@@ -46,6 +61,10 @@ export const serviceCatalog = [
     duration: "Theo ngày",
     species: "Chó / Mèo",
     includes: ["Phòng nghỉ", "Cho ăn theo lịch", "Theo dõi cơ bản hằng ngày"],
+    subServices: [
+      { name: "Phòng tiêu chuẩn", price: "199.000đ / đêm", duration: "Theo ngày" },
+      { name: "Phòng riêng", price: "269.000đ / đêm", duration: "Theo ngày" },
+      { name: "Phòng premium", price: "329.000đ / đêm", duration: "Theo ngày" },
+    ],
   },
 ];
-

@@ -47,11 +47,15 @@ const AdminProduct = () => {
   };
 
   const openEditProduct = async (record) => {
-    const res = await ProductServices.getDetailsProduct(record._id);
-    const product = res?.data || record;
-    setEditingProduct(product);
-    editForm.setFieldsValue({ name: product.name, price: product.price, description: product.description, image: product.image, type: product.type?._id || product.type, countInStock: product.countInStock, discount: product.discount || 0 });
-    setIsEditOpen(true);
+    try {
+      const res = await ProductServices.getDetailsProduct(record._id);
+      const product = res?.data || record;
+      setEditingProduct(product);
+      editForm.setFieldsValue({ name: product.name, price: product.price, description: product.description, image: product.image, type: product.type?._id || product.type, countInStock: product.countInStock, discount: product.discount || 0 });
+      setIsEditOpen(true);
+    } catch (error) {
+      message.error(error?.message || "Không thể tải chi tiết sản phẩm");
+    }
   };
 
   const productForm = (form) => (

@@ -122,7 +122,8 @@ const ProductDetailsPage = () => {
       .filter(Boolean);
     setRelatedWishlistIds(mappedIds);
     setIsFavorite(mappedIds.includes(String(product?._id || "")));
-    const localMapped = serverItems
+    const currentLocal = readLocalArray("wishlistItems");
+    const localMappedFromObjects = serverItems
       .filter((item) => item && typeof item === "object")
       .map((item) => ({
         idsp: item._id,
@@ -133,6 +134,9 @@ const ProductDetailsPage = () => {
         countInStock: item.countInStock,
         category: item?.type?.name || "Sản phẩm",
       }));
+    const localMapped = localMappedFromObjects.length
+      ? localMappedFromObjects
+      : currentLocal.filter((item) => mappedIds.includes(String(item?.idsp || "")));
     localStorage.setItem("wishlistItems", JSON.stringify(localMapped));
     window.dispatchEvent(new Event("wishlist-updated"));
   }, [isLoggedIn, wishlistQuery.isSuccess, wishlistQuery.data, product?._id]);
@@ -430,7 +434,7 @@ const ProductDetailsPage = () => {
                   max={Math.max(1, countInStock)}
                   value={quantity}
                   onChange={(event) => {
-                    const value = Number(event.target.value || 1);
+                    const value = Math.floor(Number(event.target.value || 1));
                     if (!Number.isFinite(value)) return;
                     setQuantity(Math.min(Math.max(1, value), Math.max(1, countInStock)));
                   }}
@@ -514,7 +518,7 @@ const ProductDetailsPage = () => {
               }
               const inStock = Number(item?.countInStock || 0) > 0;
               return (
-                <article key={item._id} className="product">
+                <article key={item._id || `related-${index}`} className="product">
                   <button className="heart" type="button" aria-label="Thêm vào yêu thích" onClick={(event) => toggleRelatedWishlist(event, item)}>
                     <PetshopIcon name="heart" size={16} className={relatedWishlistIds.includes(item._id) ? "is-favorite" : ""} />
                   </button>
@@ -529,6 +533,10 @@ const ProductDetailsPage = () => {
                         type="button"
                         onClick={async (event) => {
                           event.stopPropagation();
+                          if (!item?._id) {
+                            message.error("Không thể thêm sản phẩm này vào giỏ");
+                            return;
+                          }
                           const stock = Number(item?.countInStock || 0);
                           if (stock <= 0) {
                             message.error("Sản phẩm đã hết hàng");
@@ -592,6 +600,7 @@ const ProductDetailsPage = () => {
                         aria-label="Xem chi tiết"
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (!item?._id) return;
                           navigate(`/product-detail/${item._id}`);
                         }}
                       >

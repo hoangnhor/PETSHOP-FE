@@ -12,12 +12,35 @@ import "./CartPage.css";
 const FREE_SHIP_THRESHOLD = 499000;
 
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
+const resolveStock = (item, fallbackQuantity = 1) => {
+  const raw = Number(item?.countInStock);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return Math.max(1, Number(fallbackQuantity || 1));
+};
+const getStock = (item) => resolveStock(item, item?.quantity);
+const firstImage = (image) => (Array.isArray(image) ? image[0] || "" : image || "");
+const toServerCartItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0)
+    .map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) }));
+const normalizeCartItems = (items = []) =>
+  (Array.isArray(items) ? items : []).filter((item) => item?.idsp).map((item) => {
+    const rawQuantity = Number(item?.quantity || 1);
+    const stock = resolveStock(item, rawQuantity);
+    const quantity = stock > 0 ? Math.min(Math.max(1, rawQuantity), stock) : 0;
+    return {
+      ...item,
+      image: firstImage(item?.image),
+      quantity,
+      countInStock: stock,
+    };
+  });
 
 const CartPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
-  const [cartItems, setCartItems] = useState(() => JSON.parse(localStorage.getItem("cartItems") || "[]"));
+  const [cartItems, setCartItems] = useState(() => normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]")));
   const [discountCode, setDiscountCode] = useState(() => localStorage.getItem("cart_coupon_code") || "");
   const [appliedCoupon, setAppliedCoupon] = useState(() => localStorage.getItem("cart_coupon_code") || "");
   const [validatedCoupon, setValidatedCoupon] = useState(null);
@@ -33,24 +56,41 @@ const CartPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverCartQuery.data?.data?.items || [];
+    const localItems = normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]"));
+
+    if (!serverItems.length && localItems.length) {
+      CartServices.updateMyCart(
+        {
+          items: localItems
+            .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0)
+            .map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
+          couponCode: appliedCoupon || "",
+        },
+        user.access_token
+      ).catch(() => {});
+      return;
+    }
+
     const mapped = serverItems.map((item) => ({
       idsp: item.productId,
       name: item.name,
-      image: item.image,
+      image: firstImage(item.image),
       price: item.price,
       discount: item.discount || 0,
-      countInStock: item.countInStock || 9999,
+      countInStock: resolveStock(item, item.quantity || 1),
       quantity: item.quantity || 1,
       category: item.category || "Sản phẩm",
     }));
-    setCartItems(mapped);
-    localStorage.setItem("cartItems", JSON.stringify(mapped));
+    const normalized = normalizeCartItems(mapped);
+    setCartItems(normalized);
+    localStorage.setItem("cartItems", JSON.stringify(normalized));
     window.dispatchEvent(new Event("cart-updated"));
-  }, [isLoggedIn, serverCartQuery.data]);
+  }, [isLoggedIn, serverCartQuery.data, user.access_token, appliedCoupon]);
 
   const syncCart = (items) => {
-    setCartItems(items);
-    localStorage.setItem("cartItems", JSON.stringify(items));
+    const normalized = normalizeCartItems(items);
+    setCartItems(normalized);
+    localStorage.setItem("cartItems", JSON.stringify(normalized));
     window.dispatchEvent(new Event("cart-updated"));
   };
 
@@ -58,7 +98,7 @@ const CartPage = () => {
     mutationFn: (items) =>
       CartServices.updateMyCart(
         {
-          items: items.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
+          items: toServerCartItems(items),
           couponCode: appliedCoupon || "",
         },
         user.access_token
@@ -95,13 +135,53 @@ const CartPage = () => {
         message.success("Áp dụng mã giảm giá thành công");
       })
       .catch((error) => {
+        setAppliedCoupon("");
         setValidatedCoupon(null);
+        localStorage.removeItem("cart_coupon_code");
         message.error(error?.message || "Mã giảm giá không hợp lệ");
       });
   };
 
+  useEffect(() => {
+    if (!appliedCoupon) {
+      setValidatedCoupon(null);
+      return;
+    }
+    if (subTotal <= 0) {
+      setValidatedCoupon(null);
+      return;
+    }
+    let cancelled = false;
+    CouponServices.validateCoupon({ code: appliedCoupon, orderValue: subTotal })
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.status === "OK") {
+          setValidatedCoupon(res?.data || null);
+          return;
+        }
+        setAppliedCoupon("");
+        setValidatedCoupon(null);
+        localStorage.removeItem("cart_coupon_code");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAppliedCoupon("");
+        setValidatedCoupon(null);
+        localStorage.removeItem("cart_coupon_code");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedCoupon, subTotal]);
+
   const updateQuantity = (record, nextQuantity) => {
-    const nextItems = cartItems.map((item) => (item.idsp === record.idsp ? { ...item, quantity: nextQuantity } : item));
+    const maxStock = getStock(record);
+    if (maxStock <= 0) {
+      message.warning("Sản phẩm đã hết hàng");
+      return;
+    }
+    const safeQuantity = Math.min(Math.max(1, Number(nextQuantity || 1)), maxStock);
+    const nextItems = cartItems.map((item) => (item.idsp === record.idsp ? { ...item, quantity: safeQuantity } : item));
     syncCart(nextItems);
     if (isLoggedIn) syncCartMutation.mutate(nextItems);
   };
@@ -135,7 +215,7 @@ const CartPage = () => {
           {
             idsp: item._id,
             name: item.name,
-            image: item.image,
+            image: firstImage(item.image),
             price: item.price,
             discount: item.discount || 0,
             countInStock: item.countInStock,
@@ -158,7 +238,11 @@ const CartPage = () => {
     message.success("Đã xóa giỏ hàng");
   };
 
-  const suggestions = (suggestQuery.data?.data || []).filter((item) => !cartItems.find((c) => c.idsp === item._id)).slice(0, 4);
+  const canCheckout = cartItems.length > 0 && cartItems.every((item) => getStock(item) > 0 && Number(item.quantity || 0) <= getStock(item));
+
+  const suggestions = (suggestQuery.data?.data || [])
+    .filter((item) => item?._id && !cartItems.find((c) => c.idsp === item._id))
+    .slice(0, 4);
 
   return (
     <div className="cart-view">
@@ -198,6 +282,9 @@ const CartPage = () => {
                     {cartItems.map((item) => {
                       const price = Number(item.price || 0) * (1 - Number(item.discount || 0) / 100);
                       const total = price * Number(item.quantity || 0);
+                      const stock = getStock(item);
+                      const canIncrease = Number(item.quantity || 1) < stock;
+                      const outOfStock = stock <= 0;
                       return (
                         <tr key={item.idsp}>
                           <td>
@@ -205,16 +292,16 @@ const CartPage = () => {
                               {item.image ? <img src={item.image} alt={item.name} /> : <div className="no-image">No image</div>}
                               <div>
                                 <strong>{item.name}</strong>
-                                <span>{item.category || "Sản phẩm"} · {Number(item.countInStock || 0) > 0 ? "Còn hàng" : "Hết hàng"}</span>
+                                <span>{item.category || "Sản phẩm"} · {!outOfStock ? "Còn hàng" : "Hết hàng"}</span>
                               </div>
                             </div>
                           </td>
                           <td>{formatMoney(price)}</td>
                           <td>
                             <span className="qty">
-                              <button type="button" onClick={() => updateQuantity(item, Math.max(1, Number(item.quantity || 1) - 1))}>-</button>
+                              <button type="button" onClick={() => updateQuantity(item, Math.max(1, Number(item.quantity || 1) - 1))} disabled={outOfStock}>-</button>
                               <span>{item.quantity}</span>
-                              <button type="button" onClick={() => updateQuantity(item, Math.min(Number(item.countInStock || 1), Number(item.quantity || 1) + 1))}>+</button>
+                              <button type="button" onClick={() => updateQuantity(item, Number(item.quantity || 1) + 1)} disabled={!canIncrease}>+</button>
                             </span>
                           </td>
                           <td><b>{formatMoney(total)}</b></td>
@@ -249,7 +336,23 @@ const CartPage = () => {
                 <div className="summary-row"><span>Giảm giá</span><b>-{formatMoney(discountAmount)}</b></div>
                 <div className="summary-row"><span>Phí vận chuyển</span><b>{formatMoney(shippingFee)}</b></div>
                 <div className="summary-row total"><span>Tổng cộng</span><b>{formatMoney(orderTotal)}</b></div>
-                <button className="checkout" type="button" onClick={() => navigate("/checkout")}><PetshopIcon name="check" size={14} />Tiến hành thanh toán</button>
+                <button
+                  className="checkout"
+                  type="button"
+                  disabled={!canCheckout}
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      message.error("Vui lòng đăng nhập để thanh toán");
+                      navigate("/login");
+                      return;
+                    }
+                    if (!canCheckout) {
+                      message.error("Giỏ hàng có sản phẩm vượt tồn kho hoặc đã hết hàng. Vui lòng cập nhật lại trước khi thanh toán.");
+                      return;
+                    }
+                    navigate("/checkout");
+                  }}
+                ><PetshopIcon name="check" size={14} />Tiến hành thanh toán</button>
                 <div className="secure-note">
                   <svg className="secure-note-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path>
@@ -279,8 +382,8 @@ const CartPage = () => {
                 const inStock = Number(item?.countInStock || 0) > 0;
                 return (
                   <article key={item._id} className="product" onClick={() => navigate(`/product-detail/${item._id}`)}>
-                    <button className="heart" type="button" aria-label="Yêu thích"><PetshopIcon name="heart" size={16} /></button>
-                    <div className="image-wrap"><img src={item.image} alt={item.name} /></div>
+                    <button className="heart" type="button" aria-label="Yêu thích" onClick={(event) => event.stopPropagation()}><PetshopIcon name="heart" size={16} /></button>
+                    <div className="image-wrap"><img src={firstImage(item.image)} alt={item.name} /></div>
                     <div className="body">
                       <h3 className="title">{item.name}</h3>
                       <div className="price">{formatMoney(finalPrice)}</div>

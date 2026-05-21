@@ -10,6 +10,7 @@ import { ConfirmDialog, EmptyState, PetshopIcon } from "../../components/ui";
 import "./WishlistPage.css";
 
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
+const firstImage = (image) => (Array.isArray(image) ? image[0] || "" : image || "");
 
 const WishlistPage = () => {
   const navigate = useNavigate();
@@ -43,16 +44,23 @@ const WishlistPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverWishlistQuery.data?.data?.productIds || [];
+    const localItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]");
+
+    if (!serverItems.length && localItems.length) {
+      setItems(localItems);
+      return;
+    }
+
     const mapped = serverItems.map((item) => ({
-      idsp: item._id,
-      name: item.name,
-      image: item.image,
-      price: item.price,
-      discount: item.discount || 0,
-      countInStock: item.countInStock || 0,
-      category: item?.type?.name || "Sản phẩm",
-      rating: item.rating || 4.8,
-    }));
+      idsp: typeof item === "string" ? item : item?._id,
+      name: typeof item === "string" ? "Sản phẩm yêu thích" : item?.name,
+      image: firstImage(typeof item === "string" ? "" : item?.image),
+      price: typeof item === "string" ? 0 : item?.price,
+      discount: typeof item === "string" ? 0 : item?.discount || 0,
+      countInStock: typeof item === "string" ? 0 : item?.countInStock || 0,
+      category: typeof item === "string" ? "Sản phẩm" : item?.type?.name || "Sản phẩm",
+      rating: typeof item === "string" ? 4.8 : item?.rating || 4.8,
+    })).filter((item) => item.idsp);
     syncItems(mapped);
   }, [isLoggedIn, serverWishlistQuery.data]);
 
@@ -67,15 +75,28 @@ const WishlistPage = () => {
   }, []);
 
   const clearWishlist = () => {
+    const previousItems = items;
     syncItems([]);
-    if (isLoggedIn) WishlistServices.clearMyWishlist(user.access_token).catch(() => {});
+    if (isLoggedIn) {
+      WishlistServices.clearMyWishlist(user.access_token).catch(() => {
+        syncItems(previousItems);
+        message.error("Không thể xóa danh sách yêu thích trên hệ thống");
+      });
+    }
     setIsConfirmClearOpen(false);
     message.success("Đã xóa toàn bộ danh sách yêu thích");
   };
 
   const removeItem = (idsp) => {
-    syncItems(items.filter((item) => item.idsp !== idsp));
-    if (isLoggedIn) WishlistServices.removeWishlistItem(idsp, user.access_token).catch(() => {});
+    const previousItems = items;
+    const nextItems = items.filter((item) => item.idsp !== idsp);
+    syncItems(nextItems);
+    if (isLoggedIn) {
+      WishlistServices.removeWishlistItem(idsp, user.access_token).catch(() => {
+        syncItems(previousItems);
+        message.error("Không thể cập nhật yêu thích trên hệ thống");
+      });
+    }
     message.success("Đã xóa khỏi yêu thích");
   };
 
@@ -92,9 +113,18 @@ const WishlistPage = () => {
     const nextItems = existed
       ? cartItems.map((cartItem) => (cartItem.idsp === item.idsp ? { ...cartItem, quantity: currentQty + 1 } : cartItem))
       : [...cartItems, { ...item, quantity: 1 }];
+    const previousItems = cartItems;
     localStorage.setItem("cartItems", JSON.stringify(nextItems));
     window.dispatchEvent(new Event("cart-updated"));
-    if (isLoggedIn) syncCartMutation.mutate(nextItems);
+    if (isLoggedIn) {
+      syncCartMutation.mutate(nextItems, {
+        onError: () => {
+          localStorage.setItem("cartItems", JSON.stringify(previousItems));
+          window.dispatchEvent(new Event("cart-updated"));
+          message.error("Không thể đồng bộ giỏ hàng");
+        },
+      });
+    }
     message.success("Đã thêm vào giỏ hàng");
   };
 
@@ -103,12 +133,28 @@ const WishlistPage = () => {
     const cartItems = getLocalCartItems();
     let nextCart = [...cartItems];
     items.forEach((item) => {
+      const stock = Number(item?.countInStock || 0);
+      if (stock <= 0) return;
       const existed = nextCart.find((cartItem) => cartItem.idsp === item.idsp);
-      if (!existed) nextCart.push({ ...item, quantity: 1 });
+      if (!existed) {
+        nextCart.push({ ...item, quantity: 1 });
+        return;
+      }
+      const nextQty = Math.min(Number(existed.quantity || 0) + 1, stock);
+      nextCart = nextCart.map((cartItem) => (cartItem.idsp === item.idsp ? { ...cartItem, quantity: nextQty } : cartItem));
     });
+    const previousItems = cartItems;
     localStorage.setItem("cartItems", JSON.stringify(nextCart));
     window.dispatchEvent(new Event("cart-updated"));
-    if (isLoggedIn) syncCartMutation.mutate(nextCart);
+    if (isLoggedIn) {
+      syncCartMutation.mutate(nextCart, {
+        onError: () => {
+          localStorage.setItem("cartItems", JSON.stringify(previousItems));
+          window.dispatchEvent(new Event("cart-updated"));
+          message.error("Không thể đồng bộ giỏ hàng");
+        },
+      });
+    }
     message.success("Đã thêm toàn bộ vào giỏ");
   };
 
@@ -116,6 +162,36 @@ const WishlistPage = () => {
   const totalPrice = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0), 0), [items]);
 
   const suggestions = (suggestQuery.data?.data || []).filter((product) => !items.find((item) => item.idsp === product._id)).slice(0, 4);
+
+  const toggleWishlist = (item) => {
+    const id = item?.idsp || item?._id;
+    if (!id) return;
+    const exists = items.some((wishlistItem) => wishlistItem.idsp === id);
+    const normalizedItem = {
+      idsp: id,
+      name: item?.name || "Sản phẩm yêu thích",
+      image: firstImage(item?.image),
+      price: Number(item?.price || 0),
+      discount: Number(item?.discount || 0),
+      countInStock: Number(item?.countInStock || 0),
+      category: item?.category || item?.type?.name || "Sản phẩm",
+      rating: Number(item?.rating || 4.8),
+    };
+    const previousItems = items;
+    const nextItems = exists ? items.filter((wishlistItem) => wishlistItem.idsp !== id) : [...items, normalizedItem];
+    syncItems(nextItems);
+    message.success(exists ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
+
+    if (isLoggedIn) {
+      const task = exists
+        ? WishlistServices.removeWishlistItem(id, user.access_token)
+        : WishlistServices.addWishlistItem(id, user.access_token);
+      task.catch(() => {
+        syncItems(previousItems);
+        message.error("Không thể đồng bộ yêu thích trên hệ thống");
+      });
+    }
+  };
 
   const renderCard = (item, wished = true) => {
     const id = item.idsp || item._id;
@@ -125,12 +201,16 @@ const WishlistPage = () => {
     const stockText = Number(item.countInStock || 0) > 0 ? "Còn hàng" : "Hết hàng";
     return (
       <article className="product" key={id}>
-        <button className={`heart ${wished ? "active" : ""}`} type="button" aria-label="Yêu thích">
+        <button
+          className={`heart ${wished ? "active" : ""}`}
+          type="button"
+          aria-label="Yêu thích"
+          onClick={() => toggleWishlist({ ...item, idsp: id, category })}
+        >
           <PetshopIcon name="heart" size={16} />
         </button>
-        {wished ? <span className="label"><PetshopIcon name="heart" size={12} />Đã lưu</span> : null}
         <div className="image-wrap" onClick={() => navigate(`/product-detail/${id}`)}>
-          <img src={item.image} alt={item.name} />
+          <img src={firstImage(item.image)} alt={item.name} />
         </div>
         <div className="body">
           <h3 className="title">{item.name}</h3>
@@ -140,16 +220,21 @@ const WishlistPage = () => {
           </div>
           <div className="meta"><span>{category}</span><span>{stockText}</span></div>
           <div className="card-actions">
-            <button className="add-cart" type="button" onClick={() => addToCart({ ...item, idsp: id, category })}><PetshopIcon name="cart" size={14} />Thêm giỏ</button>
-            <button className="remove-btn" type="button" onClick={() => (wished ? removeItem(id) : null)}>
-              {wished ? (
+            <button className="add-cart" type="button" onClick={() => addToCart({ ...item, idsp: id, category })}>
+              <PetshopIcon name="cart" size={14} />
+              {wished ? "Thêm vào giỏ" : "Thêm vào giỏ"}
+            </button>
+            {wished ? (
+              <button className="remove-btn" type="button" onClick={() => removeItem(id)} aria-label="Xóa khỏi yêu thích">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M18 6L6 18"></path><path d="M6 6l12 12"></path>
                 </svg>
-              ) : (
+              </button>
+            ) : (
+              <button className="quick-view" type="button" onClick={() => navigate(`/product-detail/${id}`)} aria-label="Xem chi tiết">
                 <PetshopIcon name="eye" size={14} />
-              )}
-            </button>
+              </button>
+            )}
           </div>
         </div>
       </article>

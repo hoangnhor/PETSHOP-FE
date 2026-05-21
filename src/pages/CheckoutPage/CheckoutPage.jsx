@@ -4,19 +4,44 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import * as BillServices from "../../services/BillServices";
 import * as CartServices from "../../services/CartServices";
+import * as CouponServices from "../../services/CouponServices";
 import * as message from "../../components/Message/Message";
 import { EmptyState, PetshopIcon } from "../../components/ui";
 import "./CheckoutPage.css";
 
 const SHIPPING_FEE = 30000;
+const FREE_SHIP_THRESHOLD = 499000;
 
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
+const firstImage = (image) => (Array.isArray(image) ? image[0] || "" : image || "");
+const resolveStock = (item, fallbackQuantity = 1) => {
+  const raw = Number(item?.countInStock);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return Math.max(1, Number(fallbackQuantity || 1));
+};
+const getStock = (item) => resolveStock(item, item?.quantity);
+const normalizeCartItems = (items = []) =>
+  (Array.isArray(items) ? items : []).filter((item) => item?.idsp).map((item) => {
+    const rawQuantity = Number(item?.quantity || 1);
+    const stock = resolveStock(item, rawQuantity);
+    const quantity = stock > 0 ? Math.min(Math.max(1, rawQuantity), stock) : 0;
+    return {
+      ...item,
+      image: firstImage(item?.image),
+      countInStock: stock,
+      quantity,
+    };
+  });
+const toServerCartItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0)
+    .map((item) => ({ idsp: item.idsp, quantity: Number(item.quantity || 1) }));
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
-  const [cartItems, setCartItems] = useState(() => JSON.parse(localStorage.getItem("cartItems") || "[]"));
+  const [cartItems, setCartItems] = useState(() => normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]")));
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -26,6 +51,7 @@ const CheckoutPage = () => {
     note: "",
     saveAddress: true,
   });
+  const [validatedCoupon, setValidatedCoupon] = useState(null);
 
   useEffect(() => {
     const savedAddress = JSON.parse(localStorage.getItem("checkout_saved_address") || "null");
@@ -48,20 +74,36 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverCartQuery.data?.data?.items || [];
+    const localItems = normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]"));
+
+    if (!serverItems.length && localItems.length) {
+      CartServices.updateMyCart(
+        {
+          items: localItems
+            .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0)
+            .map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
+        },
+        user.access_token
+      ).catch(() => {});
+      setCartItems(localItems);
+      return;
+    }
+
     const mapped = serverItems.map((item) => ({
       idsp: item.productId,
       name: item.name,
-      image: item.image,
+      image: firstImage(item.image),
       price: item.price,
       discount: item.discount || 0,
-      countInStock: item.countInStock || 9999,
+      countInStock: resolveStock(item, item.quantity || 1),
       quantity: item.quantity || 1,
       category: item.category || "Sản phẩm",
     }));
-    setCartItems(mapped);
-    localStorage.setItem("cartItems", JSON.stringify(mapped));
+    const normalized = normalizeCartItems(mapped);
+    setCartItems(normalized);
+    localStorage.setItem("cartItems", JSON.stringify(normalized));
     window.dispatchEvent(new Event("cart-updated"));
-  }, [isLoggedIn, serverCartQuery.data]);
+  }, [isLoggedIn, serverCartQuery.data, user.access_token]);
 
   const subTotal = useMemo(
     () => cartItems.reduce((total, item) => total + Number(item.price || 0) * (1 - Number(item.discount || 0) / 100) * Number(item.quantity || 0), 0),
@@ -69,21 +111,47 @@ const CheckoutPage = () => {
   );
 
   const couponCode = localStorage.getItem("cart_coupon_code") || "";
-  const discountAmount = useMemo(() => {
-    if (couponCode === "PET5") return Math.round(subTotal * 0.05);
-    if (couponCode === "PET30K") return Math.min(30000, subTotal);
-    return 0;
+  useEffect(() => {
+    if (!couponCode || subTotal <= 0) {
+      setValidatedCoupon(null);
+      return;
+    }
+    let cancelled = false;
+    CouponServices.validateCoupon({ code: couponCode, orderValue: subTotal })
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.status === "OK") {
+          setValidatedCoupon(res?.data || null);
+          return;
+        }
+        setValidatedCoupon(null);
+        localStorage.removeItem("cart_coupon_code");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setValidatedCoupon(null);
+        localStorage.removeItem("cart_coupon_code");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [couponCode, subTotal]);
 
+  const discountAmount = Number(validatedCoupon?.discountAmount || 0);
+
   const afterDiscount = Math.max(subTotal - discountAmount, 0);
-  const shippingFee = afterDiscount > 0 ? SHIPPING_FEE : 0;
+  const shippingFee = afterDiscount >= FREE_SHIP_THRESHOLD || afterDiscount === 0 ? 0 : SHIPPING_FEE;
   const orderTotal = afterDiscount + shippingFee;
+  const canSubmitOrder =
+    isLoggedIn &&
+    cartItems.length > 0 &&
+    cartItems.every((item) => Number(item.quantity || 0) > 0 && Number(item.quantity || 0) <= getStock(item));
 
   const createOrderMutation = useMutation({
     mutationFn: () =>
       BillServices.createBill(
         {
-          items: cartItems.map((item) => ({ idsp: item.idsp, quantity: Number(item.quantity) })),
+          items: toServerCartItems(cartItems),
           shippingAddress: {
             fullName: formData.fullName.trim(),
             email: formData.email.trim(),
@@ -132,12 +200,25 @@ const CheckoutPage = () => {
 
   const submitOrder = (event) => {
     event.preventDefault();
+    if (!isLoggedIn) {
+      message.error("Vui lòng đăng nhập để đặt hàng");
+      navigate("/login");
+      return;
+    }
+    if (!canSubmitOrder) {
+      message.error("Giỏ hàng có sản phẩm không hợp lệ hoặc đã hết hàng");
+      return;
+    }
     if (!formData.fullName.trim()) {
       message.error("Vui lòng nhập họ tên");
       return;
     }
     if (!formData.email.trim()) {
       message.error("Vui lòng nhập email");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      message.error("Email không hợp lệ");
       return;
     }
     const phoneDigits = formData.phone.replace(/\D/g, "");
@@ -268,7 +349,7 @@ const CheckoutPage = () => {
                     />
                   </div>
 
-                  <button className="btn" type="submit" disabled={createOrderMutation.isPending}>
+                  <button className="btn" type="submit" disabled={createOrderMutation.isPending || !canSubmitOrder}>
                     <PetshopIcon name="check" size={14} />
                     {createOrderMutation.isPending ? "Đang xử lý..." : "Đặt hàng"}
                   </button>

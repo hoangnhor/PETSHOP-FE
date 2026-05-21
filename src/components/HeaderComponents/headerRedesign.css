@@ -230,6 +230,38 @@
   border-top: 1px solid rgba(234, 223, 206, 0.7);
 }
 
+.site-header .mobile-menu-toggle {
+  display: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dfd0bd;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: #5a5048;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.site-header .nav-toggle-icon {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.site-header .mobile-menu-toggle.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
 .site-header .nav {
   height: 50px;
   display: flex;
@@ -238,6 +270,7 @@
   gap: 12px;
   overflow: auto;
   scrollbar-width: none;
+  transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
 }
 
 .site-header .nav::-webkit-scrollbar {
@@ -286,6 +319,33 @@
   background: #111;
   color: #fff;
   border-color: #111;
+}
+
+.site-header .nav-wrap.closed .nav {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  pointer-events: none;
+}
+
+.site-header .nav-wrap.open .nav {
+  max-height: 64px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (min-width: 901px) {
+  .site-header .mobile-menu-toggle {
+    display: none !important;
+  }
+
+  .site-header .nav-wrap .nav {
+    max-height: none;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 0;
+  }
 }
 
 .site-footer .footer {
@@ -448,49 +508,118 @@
   }
 }
 
-@media (max-width: 900px) {
-  .site-header .header-main {
-    height: auto;
-    flex-wrap: wrap;
-    padding: 16px 0;
-  }
-
+@media (max-width: 1024px) {
   .site-header .logo {
-    font-size: 38px;
+    font-size: 42px;
   }
 
-  .site-header .search {
-    order: 3;
-    flex-basis: 100%;
-  }
-
-  .site-header .actions {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-  }
-
+  .site-header .search input,
   .site-header .hbtn {
-    flex: 1;
-    min-width: 0;
-    justify-content: center;
-    padding: 0 8px;
-  }
-
-  .site-header .nav {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    padding-bottom: 8px;
-    justify-content: flex-start;
-    height: auto;
+    height: 42px;
   }
 
   .site-header .nav a,
   .site-header .nav button {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 900px) {
+  .site-header .header-main {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-areas:
+      "search search search"
+      "menu logo actions";
+    align-items: center;
+    row-gap: 10px;
+    column-gap: 10px;
+  }
+
+  .site-header .mobile-menu-toggle {
+    display: inline-flex;
+    grid-area: menu;
+    justify-self: start;
+  }
+
+  .site-header .logo {
+    grid-area: logo;
+  }
+
+  .site-header .search {
+    grid-area: search;
+  }
+
+  .site-header .actions {
+    grid-area: actions;
+  }
+
+  .site-header .header-main {
+    height: auto;
+    padding: 12px 0;
+  }
+
+  .site-header .logo {
+    font-size: 36px;
+  }
+
+  .site-header .search {
+    width: 100%;
+  }
+
+  .site-header .actions {
+    width: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    justify-self: end;
+  }
+
+  .site-header .hbtn {
+    width: 100%;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .site-header .badge {
+    top: -7px;
+    left: auto;
+    right: 8px;
+  }
+
+  .site-header .nav {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    height: auto;
+    overflow: hidden;
+    padding: 8px 0 10px;
+    transform-origin: top;
+    transition: max-height 0.28s ease, opacity 0.2s ease, padding 0.28s ease;
+  }
+
+  .site-header .nav a,
+  .site-header .nav button {
+    width: 100%;
+    justify-content: flex-start;
     margin-right: 0;
-    flex: 0 0 auto;
+    min-height: 36px;
+  }
+
+  .site-header .nav-wrap.closed .nav {
+    max-height: 0;
+    padding: 0;
+    opacity: 0;
+  }
+
+  .site-header .nav-wrap.open .nav {
+    max-height: 380px;
+    padding: 8px 0 10px;
   }
 
   .site-footer .footer-grid {
@@ -499,10 +628,129 @@
   }
 }
 
+@media (max-width: 620px) {
+  .site-header .container,
+  .site-footer .container {
+    width: calc(100% - 24px);
+  }
+
+  .site-header .header-main {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "search search search"
+      "menu logo actions";
+    row-gap: 10px;
+    column-gap: 10px;
+  }
+
+  .site-header .logo {
+    font-size: 34px;
+    letter-spacing: -1.2px;
+    justify-self: start;
+    align-self: center;
+  }
+
+  .site-header .search input {
+    height: 40px;
+    border-radius: 11px;
+    padding: 0 40px 0 12px;
+    font-size: 13px;
+  }
+
+  .site-header .search-btn {
+    top: 6px;
+    right: 8px;
+  }
+
+  .site-header .actions {
+    grid-template-columns: repeat(3, 42px);
+    width: auto;
+    justify-self: end;
+    gap: 6px;
+  }
+
+  .site-header .hbtn {
+    height: 42px;
+    width: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .site-header .hicon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .site-header .profile-name,
+  .site-header .profile-caret {
+    display: none;
+  }
+
+  .site-header .avatar {
+    margin-right: 0;
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .site-header .nav-wrap {
+    border-top: 0;
+  }
+
+  .site-header .nav a,
+  .site-header .nav button {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  .site-header .nav-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .site-header .mobile-menu-toggle {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+    border-radius: 999px;
+    min-width: 72px;
+    justify-content: center;
+  }
+
+  .site-header .nav-wrap.open .nav {
+    max-height: 360px;
+  }
+}
+
 @media (max-width: 480px) {
+  .site-header .container,
+  .site-footer .container {
+    width: calc(100% - 20px);
+  }
+
   .site-header .hbtn-label,
   .site-header .profile-name,
   .site-header .profile-caret {
     display: none;
+  }
+
+  .site-header .actions {
+    grid-template-columns: repeat(3, 40px);
+    gap: 6px;
+  }
+
+  .site-header .hbtn {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .site-header .nav a,
+  .site-header .nav button {
+    padding: 0 11px;
   }
 }

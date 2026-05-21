@@ -133,6 +133,10 @@
   align-items: stretch;
 }
 
+.contact-view .layout > * {
+  min-width: 0;
+}
+
 .contact-view .card {
   background: #fff;
   border-radius: 20px;
@@ -140,6 +144,8 @@
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.06);
   padding: 28px;
   height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .contact-view .card h2 {
@@ -232,6 +238,7 @@
   color: #5f554c;
   font-weight: 600;
   transition: 0.25s;
+  box-sizing: border-box;
 }
 
 .contact-view .field textarea {
@@ -264,17 +271,11 @@
 }
 
 .contact-view .contact-form-card form {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.contact-view .contact-form-card .form-grid {
-  flex: 1;
+  height: auto;
 }
 
 .contact-view .contact-form-card .submit {
-  margin-top: auto;
+  margin-top: 8px;
 }
 
 .contact-view .submit:hover {
@@ -408,6 +409,20 @@
   }
 }
 
+@media (max-width: 768px) {
+  .contact-view .page {
+    padding: 20px 0 44px;
+  }
+
+  .contact-view .hero h1 {
+    font-size: 38px;
+  }
+
+  .contact-view .card {
+    padding: 22px;
+  }
+}
+
 @media (max-width: 560px) {
   .contact-view .breadcrumb {
     border-radius: 16px;
@@ -438,5 +453,15 @@
 
   .contact-view .field.full {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .contact-view .container {
+    width: calc(100% - 20px);
+  }
+
+  .contact-view .hero h1 {
+    font-size: 32px;
   }
 }

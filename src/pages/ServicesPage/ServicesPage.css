@@ -519,6 +519,20 @@
   }
 }
 
+@media (max-width: 768px) {
+  .services-view .page {
+    padding: 20px 0 44px;
+  }
+
+  .services-view .hero-box h1 {
+    font-size: 36px;
+  }
+
+  .services-view .section-head h2 {
+    font-size: 34px;
+  }
+}
+
 @media (max-width: 560px) {
   .services-view .hero-box {
     padding: 28px 22px;
@@ -549,5 +563,15 @@
     border-radius: 16px;
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 390px) {
+  .services-view .container {
+    width: calc(100% - 20px);
+  }
+
+  .services-view .hero-box h1 {
+    font-size: 32px;
   }
 }

@@ -13,6 +13,7 @@ import "./ProfilePage.css";
 
 const ProfilePage = () => {
   const user = useSelector((state) => state.user);
+  const userId = user?.id || user?._id || "";
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [avatar, setAvatar] = useState("");
@@ -42,10 +43,10 @@ const ProfilePage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload) => UserServices.updateUser(user?.id, payload, user?.access_token),
+    mutationFn: (payload) => UserServices.updateUser(userId, payload, user?.access_token),
     onSuccess: async () => {
       message.success("Cập nhật thông tin thành công");
-      const detail = await UserServices.getDetailsUser(user?.id, user?.access_token);
+      const detail = await UserServices.getDetailsUser(userId, user?.access_token);
       dispatch(updateUser({ ...detail?.data, access_token: user?.access_token }));
     },
     onError: () => message.error("Cập nhật thông tin thất bại"),
@@ -79,6 +80,11 @@ const ProfilePage = () => {
 
   const onSubmit = (event) => {
     event.preventDefault();
+    if (!user?.access_token || !userId) {
+      message.error("Phiên đăng nhập không hợp lệ");
+      navigate("/login");
+      return;
+    }
     if (!formData.name.trim()) {
       message.error("Vui lòng nhập họ tên");
       return;
@@ -86,6 +92,17 @@ const ProfilePage = () => {
     if (!formData.email.trim()) {
       message.error("Vui lòng nhập email");
       return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      message.error("Email không hợp lệ");
+      return;
+    }
+    if (formData.phone.trim()) {
+      const phoneDigits = formData.phone.replace(/\D/g, "");
+      if (phoneDigits.length < 9 || phoneDigits.length > 11) {
+        message.error("Số điện thoại không hợp lệ");
+        return;
+      }
     }
     updateMutation.mutate({ ...formData, avatar });
   };
@@ -117,6 +134,8 @@ const ProfilePage = () => {
             </div>
             <div className="side-menu">
               <button className="side-link active" type="button"><svg className="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.6-4.2 14.4-4.2 16 0"></path></svg>Thông tin cá nhân</button>
+              <button className="side-link" type="button" onClick={() => navigate("/my-pets")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M8.5 9.5c1.1 0 2-1.2 2-2.7S9.6 4 8.5 4s-2 1.2-2 2.8.9 2.7 2 2.7z"></path><path d="M15.5 9.5c1.1 0 2-1.2 2-2.7S16.6 4 15.5 4s-2 1.2-2 2.8.9 2.7 2 2.7z"></path><path d="M5.2 13.2c.9.5 2.2 0 2.9-1.2.7-1.2.5-2.6-.4-3.1-.9-.5-2.2 0-2.9 1.2-.7 1.2-.5 2.6.4 3.1z"></path><path d="M18.8 13.2c-.9.5-2.2 0-2.9-1.2-.7-1.2-.5-2.6.4-3.1.9-.5 2.2 0 2.9 1.2.7 1.2.5 2.6-.4 3.1z"></path><path d="M8.2 18.2c.3-2.7 1.9-4.6 3.8-4.6s3.5 1.9 3.8 4.6c.2 1.6-1 2.8-2.4 2.1-.8-.4-2-.4-2.8 0-1.4.7-2.6-.5-2.4-2.1z"></path></svg>Thú cưng của tôi</button>
+              <button className="side-link" type="button" onClick={() => navigate("/my-appointments")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M8 2v4"></path><path d="M16 2v4"></path><path d="M3 9h18"></path><path d="M5 5h14v16H5z"></path></svg>Lịch hẹn của tôi</button>
               <button className="side-link" type="button" onClick={() => navigate("/order-history")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg>Lịch sử đơn</button>
               <button className="side-link" type="button" onClick={() => navigate("/wishlist")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9.2C1.5 7.1 3.8 4 7.2 4c2 0 3.5 1.1 4.8 2.8C13.3 5.1 14.8 4 16.8 4c3.4 0 5.7 3.1 4.2 6.8C19 15.6 12 20 12 20z"></path></svg>Yêu thích</button>
               <button className="side-link" type="button" onClick={() => navigate("/cart")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M5 7h15l-1.4 8.2a2 2 0 0 1-2 1.7H8.2a2 2 0 0 1-2-1.6L4.6 4H2"></path><circle cx="9" cy="20" r="1.2"></circle><circle cx="17" cy="20" r="1.2"></circle></svg>Giỏ hàng</button>
@@ -131,6 +150,8 @@ const ProfilePage = () => {
               </div>
               <div className="head-actions">
                 <button className="small-btn" type="button" onClick={() => navigate("/order-history")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg>Lịch sử đơn</button>
+                <button className="small-btn" type="button" onClick={() => navigate("/my-pets")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M8.5 9.5c1.1 0 2-1.2 2-2.7S9.6 4 8.5 4s-2 1.2-2 2.8.9 2.7 2 2.7z"></path><path d="M15.5 9.5c1.1 0 2-1.2 2-2.7S16.6 4 15.5 4s-2 1.2-2 2.8.9 2.7 2 2.7z"></path><path d="M5.2 13.2c.9.5 2.2 0 2.9-1.2.7-1.2.5-2.6-.4-3.1-.9-.5-2.2 0-2.9 1.2-.7 1.2-.5 2.6.4 3.1z"></path><path d="M18.8 13.2c-.9.5-2.2 0-2.9-1.2-.7-1.2-.5-2.6.4-3.1.9-.5 2.2 0 2.9 1.2.7 1.2.5 2.6-.4 3.1z"></path><path d="M8.2 18.2c.3-2.7 1.9-4.6 3.8-4.6s3.5 1.9 3.8 4.6c.2 1.6-1 2.8-2.4 2.1-.8-.4-2-.4-2.8 0-1.4.7-2.6-.5-2.4-2.1z"></path></svg>Thú cưng</button>
+                <button className="small-btn" type="button" onClick={() => navigate("/my-appointments")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M8 2v4"></path><path d="M16 2v4"></path><path d="M3 9h18"></path><path d="M5 5h14v16H5z"></path></svg>Lịch hẹn</button>
                 <button className="small-btn" type="button" onClick={() => navigate("/wishlist")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9.2C1.5 7.1 3.8 4 7.2 4c2 0 3.5 1.1 4.8 2.8C13.3 5.1 14.8 4 16.8 4c3.4 0 5.7 3.1 4.2 6.8C19 15.6 12 20 12 20z"></path></svg>Yêu thích</button>
               </div>
             </div>

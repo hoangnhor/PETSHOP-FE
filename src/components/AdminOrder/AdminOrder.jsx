@@ -46,11 +46,13 @@ const AdminOrder = () => {
 
     const updateStatusMutation = useMutation({
         mutationFn: ({ id, orderStatus }) => BillServices.updateBillStatus(id, { orderStatus }, user.access_token),
-        onSuccess: (res) => { if (res?.status === "OK") { message.success("Cập nhật đơn hàng thành công"); ordersQuery.refetch(); } else message.error(res?.message || "Cập nhật thất bại"); }
+        onSuccess: (res) => { if (res?.status === "OK") { message.success("Cập nhật đơn hàng thành công"); ordersQuery.refetch(); } else message.error(res?.message || "Cập nhật thất bại"); },
+        onError: (error) => message.error(error?.message || "Cập nhật thất bại"),
     });
     const deleteOrderMutation = useMutation({
         mutationFn: (id) => BillServices.deleteBill(id, user.access_token),
-        onSuccess: (res) => { if (res?.status === "OK") { message.success("Xóa đơn hàng thành công"); ordersQuery.refetch(); } else message.error(res?.message || "Xóa đơn hàng thất bại"); }
+        onSuccess: (res) => { if (res?.status === "OK") { message.success("Xóa đơn hàng thành công"); ordersQuery.refetch(); } else message.error(res?.message || "Xóa đơn hàng thất bại"); },
+        onError: (error) => message.error(error?.message || "Xóa đơn hàng thất bại"),
     });
 
     const rows = useMemo(() => {
@@ -67,7 +69,18 @@ const AdminOrder = () => {
         { title: "Thanh toán", render: (_, record) => <div><div>{record.paymentMethod}</div><Tag color={paymentStatusMap[record.paymentStatus]?.color || "default"}>{paymentStatusMap[record.paymentStatus]?.text || record.paymentStatus}</Tag></div> },
         { title: "Trạng thái", dataIndex: "orderStatus", render: (status) => <Tag color={orderStatusMap[status]?.color || "default"}>{orderStatusMap[status]?.text || status}</Tag> },
         { title: "Ngày tạo", dataIndex: "createdAt", render: (value) => (value ? new Date(value).toLocaleString("vi-VN") : "") },
-        { title: "Cập nhật", render: (_, record) => <PetshopSelect value={record.orderStatus} style={{ width: 150 }} options={orderStatusOptions} disabled={record.orderStatus === "cancelled"} onChange={(orderStatus) => updateStatusMutation.mutate({ id: record._id, orderStatus })} /> },
+        {
+            title: "Cập nhật",
+            render: (_, record) => (
+                <PetshopSelect
+                    value={record.orderStatus}
+                    style={{ width: 150 }}
+                    options={orderStatusOptions}
+                    disabled={record.orderStatus === "cancelled" || updateStatusMutation.isPending}
+                    onChange={(orderStatus) => updateStatusMutation.mutate({ id: record._id, orderStatus })}
+                />
+            )
+        },
         {
             title: "", render: (_, record) => (
                 <div className="admin-actions">

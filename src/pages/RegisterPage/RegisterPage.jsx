@@ -20,6 +20,21 @@ const RegisterPage = () => {
       message.error("Vui lòng nhập đầy đủ thông tin bắt buộc");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      message.error("Email không hợp lệ");
+      return;
+    }
+    if (formData.phone.trim()) {
+      const phoneDigits = formData.phone.replace(/\D/g, "");
+      if (phoneDigits.length < 9 || phoneDigits.length > 11) {
+        message.error("Số điện thoại không hợp lệ");
+        return;
+      }
+    }
+    if (formData.password.length < 6) {
+      message.error("Mật khẩu tối thiểu 6 ký tự");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await UserServices.SignupUser(formData);

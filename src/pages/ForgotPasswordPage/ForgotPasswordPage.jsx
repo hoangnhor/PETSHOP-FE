@@ -14,6 +14,10 @@ const ForgotPasswordPage = () => {
       message.error("Vui lòng nhập email tài khoản");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      message.error("Email không hợp lệ");
+      return;
+    }
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
