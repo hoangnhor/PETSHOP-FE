@@ -1,0 +1,36 @@
+:root {
+  --petshop-color-bg: #f6efe4;
+  --petshop-color-surface: #fffdf9;
+  --petshop-color-surface-soft: rgba(255, 255, 255, 0.88);
+  --petshop-color-primary: #1a1a1a;
+  --petshop-color-accent: #c69a5c;
+  --petshop-color-accent-strong: #a67c52;
+  --petshop-color-border: rgba(198, 169, 105, 0.28);
+  --petshop-color-muted: #666666;
+  --petshop-color-error: #8a3d3d;
+  --petshop-color-success: #2f7a45;
+
+  --petshop-font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --petshop-font-heading: "Playfair Display", Georgia, serif;
+
+  --petshop-space-1: 4px;
+  --petshop-space-2: 8px;
+  --petshop-space-3: 12px;
+  --petshop-space-4: 16px;
+  --petshop-space-5: 20px;
+  --petshop-space-6: 24px;
+  --petshop-space-7: 32px;
+  --petshop-space-8: 40px;
+
+  --petshop-radius-sm: 12px;
+  --petshop-radius-md: 16px;
+  --petshop-radius-pill: 999px;
+
+  --petshop-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --petshop-shadow-hover: 0 16px 40px rgba(0, 0, 0, 0.08);
+
+  --petshop-container-max: 1280px;
+  --petshop-breakpoint-mobile: 390px;
+  --petshop-breakpoint-tablet: 768px;
+  --petshop-breakpoint-laptop: 1366px;
+}

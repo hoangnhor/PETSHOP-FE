@@ -1,0 +1,11 @@
+.styleguide-view { background: #f6efe4; color: #151515; min-height: 60vh; font-family: Inter, sans-serif; }
+.styleguide-view .container { width: 1180px; margin: auto; }
+.styleguide-view .page { padding: 34px 0 70px; }
+.styleguide-view .page-title { font-family: "Playfair Display", serif; font-size: 52px; line-height: 1; font-weight: 600; margin-bottom: 10px; }
+.styleguide-view .sub { color: #6b6258; font-size: 15px; font-weight: 600; line-height: 1.7; margin-bottom: 22px; }
+.styleguide-view .card { background: #fff; border-radius: 22px; box-shadow: 0 18px 38px rgba(0,0,0,.06); border: 1px solid rgba(234,223,206,.78); padding: 28px; }
+.styleguide-view .card h2 { font-family: "Playfair Display", serif; }
+.styleguide-view .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+.styleguide-view .breadcrumb { width: max-content; display: flex; align-items: center; gap: 8px; color: #6d5840; font-size: 13px; font-weight: 800; padding: 10px 14px; border: 1px solid #dfd0bd; border-radius: 999px; background: #fffdf9; box-shadow: 0 6px 16px rgba(0,0,0,.04); margin-bottom: 18px; }
+@media (max-width: 1180px) { .styleguide-view .container { width: calc(100% - 40px); } }
+@media (max-width: 900px) { .styleguide-view .container { width: calc(100% - 32px); } .styleguide-view .grid { grid-template-columns: 1fr; } .styleguide-view .page-title { font-size: 40px; } }

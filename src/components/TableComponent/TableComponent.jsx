@@ -1,6 +1,7 @@
-import { Empty, Table } from "antd";
+import { Table } from "antd";
 import React from "react";
 import Loading from "../LoadingComponent/Loading";
+import EmptyState from "../ui/states/EmptyState";
 
 const TableComponent = (props) => {
     const {
@@ -39,7 +40,7 @@ const TableComponent = (props) => {
                         showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
                     }
                 }
-                locale={{ emptyText: <Empty description="Không có dữ liệu" /> }}
+                locale={{ emptyText: <EmptyState description="Không có dữ liệu" /> }}
                 {...tableProps}
             />
         </Loading>

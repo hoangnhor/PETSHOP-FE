@@ -1,9 +1,9 @@
-import { Input } from "antd";
 import React from "react";
+import { PetshopInput } from "../ui";
 
 const InputComponent =({size,placeholder,bordered,style,...rests})=>{
     return (
-            <Input 
+            <PetshopInput 
             size={size} 
             placeholder ={placeholder } 
            

@@ -1,11 +1,13 @@
 import React from "react";
 import { StyledNameProduct, WrapperCardStyle, WrapperDiscountText, WrapperPriceText } from "./style";
-import { useNavigate } from "react-router-dom";
-import { HeartOutlined, HeartFilled } from "@ant-design/icons";
+import { useLocation, useNavigate } from "react-router-dom";
+import { HeartOutlined, HeartFilled, ShoppingCartOutlined } from "@ant-design/icons";
+import * as message from "../Message/Message";
 
 const CardComponent = (props) => {
     const { id, image, name, price, discount = 0, countInStock = 0, category = "" } = props;
     const navigate = useNavigate();
+    const location = useLocation();
     const finalPrice = Math.round(Number(price || 0) * (1 - Number(discount || 0) / 100));
     const wishlistItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]");
     const isFavorite = wishlistItems.some((item) => item.idsp === id);
@@ -17,15 +19,32 @@ const CardComponent = (props) => {
             : [...wishlistItems, { idsp: id, name, image, price, discount, countInStock, category }];
         localStorage.setItem("wishlistItems", JSON.stringify(nextItems));
         window.dispatchEvent(new Event("wishlist-updated"));
+        message.success(isFavorite ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
+    };
+
+    const handleAddToCart = (event) => {
+        event.stopPropagation();
+        if (!countInStock) {
+            message.error("Sản phẩm hiện đang hết hàng");
+            return;
+        }
+        const cartItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+        const existed = cartItems.find((item) => item.idsp === id);
+        const nextItems = existed
+            ? cartItems.map((item) => (item.idsp === id ? { ...item, quantity: Math.min((item.quantity || 1) + 1, countInStock) } : item))
+            : [...cartItems, { idsp: id, name, image, price, discount, countInStock, quantity: 1, category }];
+        localStorage.setItem("cartItems", JSON.stringify(nextItems));
+        window.dispatchEvent(new Event("cart-updated"));
+        message.success("Đã thêm vào giỏ hàng");
     };
 
     return (
         <WrapperCardStyle
             hoverable
-            onClick={() => id && navigate(`/product-detail/${id}`)}
-            styles={{ body: { padding: "14px" } }}
+            onClick={() => id && navigate(`/product-detail/${id}`, { state: { from: `${location.pathname}${location.search}` } })}
+            styles={{ body: { padding: "16px" } }}
             cover={
-                <div style={{ position: "relative", background: "#f8fafc" }}>
+                <div style={{ position: "relative", lineHeight: 0 }}>
                     {Number(discount) > 0 ? (
                         <span
                             style={{
@@ -70,24 +89,28 @@ const CardComponent = (props) => {
                         src={image || "https://via.placeholder.com/300"}
                         style={{
                             width: "100%",
-                            height: "250px",
-                            objectFit: "cover",
+                            height: "auto",
+                            display: "block",
                             transition: "transform .45s ease",
                         }}
                     />
+                    <button className="quick-add-btn" onClick={handleAddToCart} aria-label="add-to-cart">
+                        <ShoppingCartOutlined /> Thêm giỏ hàng
+                    </button>
                 </div>
             }
         >
-            <StyledNameProduct>{name}</StyledNameProduct>
-            <WrapperDiscountText style={{ display: "block", marginBottom: 5 }}>{category || "Luxury Collection"}</WrapperDiscountText>
-            <WrapperPriceText>
-                <span>{finalPrice.toLocaleString("vi-VN")}đ</span>
-            </WrapperPriceText>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                <WrapperDiscountText>Premium Delivery</WrapperDiscountText>
-                <WrapperDiscountText style={{ color: countInStock > 0 ? "#A67C52" : "#7f1d1d" }}>
-                    {countInStock > 0 ? `Còn ${countInStock}` : "Hết hàng"}
-                </WrapperDiscountText>
+            <div style={{ display: "grid", gap: 6 }}>
+                <StyledNameProduct>{name}</StyledNameProduct>
+                <WrapperPriceText>
+                    <span>{finalPrice.toLocaleString("vi-VN")}đ</span>
+                </WrapperPriceText>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <WrapperDiscountText>Giao hàng tiêu chuẩn</WrapperDiscountText>
+                    <WrapperDiscountText style={{ color: countInStock > 0 ? "#A67C52" : "#7f1d1d" }}>
+                        {countInStock > 0 ? "Còn hàng" : "Hết hàng"}
+                    </WrapperDiscountText>
+                </div>
             </div>
         </WrapperCardStyle>
     );

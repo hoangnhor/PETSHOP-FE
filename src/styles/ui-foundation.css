@@ -1,0 +1,57 @@
+.petshop-ui-surface {
+  background: var(--petshop-color-surface-soft);
+  border: 1px solid var(--petshop-color-border);
+  border-radius: 22px;
+  box-shadow: var(--petshop-shadow-card);
+}
+
+.petshop-grid-responsive {
+  display: grid;
+  gap: var(--petshop-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.petshop-state-wrap {
+  padding: var(--petshop-space-6);
+  text-align: center;
+}
+
+.petshop-admin-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--petshop-space-5);
+}
+
+.petshop-btn.ant-btn {
+  min-height: 44px;
+  border-radius: 13px !important;
+  font-weight: 800 !important;
+  padding-inline: 18px;
+}
+
+.petshop-btn.ant-btn-primary {
+  background: #111 !important;
+  border-color: #111 !important;
+}
+
+.petshop-field.ant-input,
+.petshop-field.ant-input-affix-wrapper,
+.petshop-field.ant-input-number,
+.petshop-select .ant-select-selector,
+.petshop-textarea.ant-input {
+  min-height: 42px;
+  border-radius: 12px !important;
+  border-color: #dfd0bd !important;
+  background: #fff !important;
+}
+
+.petshop-select.ant-select .ant-select-selector {
+  min-height: 42px !important;
+  padding-top: 4px !important;
+}
+
+@media (max-width: 1024px) {
+  .petshop-admin-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,3 @@
-import { Image } from "antd";
 import React from "react";
 import { WrapperSliderStyle } from "./style";
 
@@ -19,7 +18,7 @@ const SliderComponen =({arrImages})=>{
         <WrapperSliderStyle {...settings}>
             {arrImages.map((image)=>{
                 return (
-                    <Image key={image} src={image} alt="silder" preview={false} width="100%" height="500px" />
+                    <img key={image} src={image} alt="slider" />
                 )
             })}
         </WrapperSliderStyle>

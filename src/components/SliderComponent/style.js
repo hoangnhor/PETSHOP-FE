@@ -2,17 +2,26 @@ import  Slider  from "react-slick";
 import styled from "styled-components";
 
 export const WrapperSliderStyle=styled(Slider)`
-    border-radius:20px;
+    height:100%;
+    border-radius:0;
     overflow:hidden;
-    box-shadow:0 24px 50px rgba(26, 26, 26, 0.16);
-    background:#1A1A1A;
-
-    .ant-image {
-        display:block;
-    }
+    background:#f7f3ed;
 
     img {
-        object-fit:cover;
+        display:block;
+        width:100%;
+        height:100% !important;
+        object-fit:contain;
+        object-position:center center;
+        background:#f7f3ed;
+    }
+
+    .slick-slider,
+    .slick-list,
+    .slick-track,
+    .slick-slide,
+    .slick-slide > div {
+        height:100%;
     }
 
     & .slick-arrow.slick-prev{
@@ -35,7 +44,7 @@ export const WrapperSliderStyle=styled(Slider)`
     }
         & .slick-dots{
             z-index:10;
-            bottom:-2px !important;       
+            bottom:8px !important;       
         li{
             button{
                 &::before{   
@@ -52,9 +61,4 @@ export const WrapperSliderStyle=styled(Slider)`
         }
     }
 
-    @media (max-width: 768px) {
-        .ant-image-img {
-            height:280px !important;
-        }
-    }
 `

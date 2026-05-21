@@ -1,205 +1,177 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { WrapperContentProfile, WrapperInput, WrapperLabel, WrapperUploadFile } from "./style";
-import InputFormComponent from "../../components/InputFormComponent/InputFormComponent";
-import ButtonComponent from "../../components/ButtonComponent/ButtonComponent";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import * as UserServices from '../../services/UserServices';
-import { useMutationHook } from "../../hooks/useMutationHook";
-import Loading from "../../components/LoadingComponent/Loading";
-import { Button } from "antd";
-import { useQuery } from "@tanstack/react-query";
-import * as BillServices from "../../services/BillServices";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import * as UserServices from "../../services/UserServices";
+import * as BillServices from "../../services/BillServices";
+import * as CartServices from "../../services/CartServices";
+import * as WishlistServices from "../../services/WishlistServices";
 import { updateUser } from "../../redux/slides/userSlider";
-import * as message from '../../components/Message/Message';
-import { UploadOutlined } from '@ant-design/icons';
+import * as message from "../../components/Message/Message";
 import { getBase64 } from "../../utils";
-import FooterComponent from "../../components/FooterComponent/FooterComponent"; // Import FooterComponent
+import "./ProfilePage.css";
 
 const ProfilePage = () => {
-    const user = useSelector((state) => state.user);
-    const navigate = useNavigate();
-    const [email, setEmail] = useState('');
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [address, setAddress] = useState('');
-    const [avatar, setAvatar] = useState('');
+  const user = useSelector((state) => state.user);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [avatar, setAvatar] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
 
-    const mutation = useMutationHook(
-        (data) => {
-            const { id, access_token, ...rests } = data;
-            return UserServices.updateUser(id, rests, access_token);
-        }
-    );
+  const ordersQuery = useQuery({
+    queryKey: ["profile-order-count", user?.access_token],
+    queryFn: () => BillServices.getAllBill(user?.access_token),
+    enabled: Boolean(user?.access_token),
+  });
 
-    const dispatch = useDispatch();
-    const { isPending, isSuccess, isError } = mutation;
-    const ordersQuery = useQuery({
-        queryKey: ["profile-order-count", user?.access_token],
-        queryFn: () => BillServices.getAllBill(user?.access_token),
-        enabled: Boolean(user?.access_token),
+  const cartQuery = useQuery({
+    queryKey: ["profile-cart-count", user?.access_token],
+    queryFn: () => CartServices.getMyCart(user?.access_token),
+    enabled: Boolean(user?.access_token),
+  });
+
+  const wishlistQuery = useQuery({
+    queryKey: ["profile-wishlist-count", user?.access_token],
+    queryFn: () => WishlistServices.getMyWishlist(user?.access_token),
+    enabled: Boolean(user?.access_token),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (payload) => UserServices.updateUser(user?.id, payload, user?.access_token),
+    onSuccess: async () => {
+      message.success("Cập nhật thông tin thành công");
+      const detail = await UserServices.getDetailsUser(user?.id, user?.access_token);
+      dispatch(updateUser({ ...detail?.data, access_token: user?.access_token }));
+    },
+    onError: () => message.error("Cập nhật thông tin thất bại"),
+  });
+
+  useEffect(() => {
+    setFormData({
+      email: user?.email || "",
+      name: user?.name || "",
+      phone: user?.phone || "",
+      address: user?.address || "",
     });
-    const wishlistCount = JSON.parse(localStorage.getItem("wishlistItems") || "[]").length;
+    setAvatar(user?.avatar || "");
+  }, [user]);
 
-    const handleGetDetailsUser = useCallback(async (id, token) => {
-        const res = await UserServices.getDetailsUser(id, token);
-        dispatch(updateUser({ ...res?.data, access_token: token }));
-    }, [dispatch]);
+  const orderCount = useMemo(() => ordersQuery.data?.data?.length || 0, [ordersQuery.data?.data]);
+  const wishlistCount = useMemo(() => wishlistQuery.data?.data?.productIds?.length || 0, [wishlistQuery.data?.data?.productIds]);
+  const cartCount = useMemo(() => cartQuery.data?.data?.items?.length || 0, [cartQuery.data?.data?.items]);
 
-    useEffect(() => {
-        setEmail(user?.email);
-        setName(user?.name);
-        setPhone(user?.phone);
-        setAddress(user?.address);
-        setAvatar(user?.avatar);
-    }, [user]);
+  const onInputChange = useCallback((event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
 
-    useEffect(() => {
-        if (isSuccess) {
-            message.success('Cập nhật thông tin thành công');
-            handleGetDetailsUser(user?.id, user?.access_token);
-        } else if (isError) {
-            message.error('Cập nhật thông tin thất bại');
-        }
-    }, [isSuccess, isError, handleGetDetailsUser, user?.id, user?.access_token]);
+  const onAvatarChange = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const base64 = await getBase64(file);
+    setAvatar(base64);
+  }, []);
 
-    const handleOnchangeEmail = (value) => { setEmail(value); };
-    const handleOnchangeName = (value) => { setName(value); };
-    const handleOnchangePhone = (value) => { setPhone(value); };
-    const handleOnchangeAddress = (value) => { setAddress(value); };
-    const handleOnchangeAvatar = async ({ fileList }) => {
-        const file = fileList[0];
-        if (!file) {
-            setAvatar('');
-            return;
-        }
-        if (!file.url && !file.preview) {
-            file.preview = await getBase64(file.originFileObj);
-        }
-        setAvatar(file.preview);
-    };
+  const onSubmit = (event) => {
+    event.preventDefault();
+    if (!formData.name.trim()) {
+      message.error("Vui lòng nhập họ tên");
+      return;
+    }
+    if (!formData.email.trim()) {
+      message.error("Vui lòng nhập email");
+      return;
+    }
+    updateMutation.mutate({ ...formData, avatar });
+  };
 
-    const handleUpdate = () => {
-        mutation.mutate({ id: user?.id, email, name, phone, address, avatar, access_token: user?.access_token });
-    };
-
-    return (
-        <div style={{ width: '100%', background: 'transparent', marginTop: "0" }}>
-            <div style={{ width: 'min(1240px, calc(100% - 40px))', margin: '0 auto', minHeight: '500px', padding: "30px 0 40px" }}>
-                <Loading isPending={isPending}>
-                    <WrapperContentProfile style={{ marginTop: "0" }}>
-                        <h2 style={{ margin: 0, color: "#1A1A1A", fontSize: 44 }}>My Profile</h2>
-                        <p style={{ margin: "2px 0 8px", color: "#555" }}>Quản lý thông tin tài khoản petshop của bạn</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
-                            <div style={{ border: "1px solid rgba(198,169,105,.24)", borderRadius: 14, padding: 12, background: "rgba(255,255,255,.84)" }}>
-                                <p style={{ margin: 0, color: "#888", fontSize: 12 }}>Orders</p>
-                                <strong style={{ color: "#1A1A1A", fontSize: 28 }}>{ordersQuery.data?.data?.length || 0}</strong>
-                            </div>
-                            <div style={{ border: "1px solid rgba(198,169,105,.24)", borderRadius: 14, padding: 12, background: "rgba(255,255,255,.84)" }}>
-                                <p style={{ margin: 0, color: "#888", fontSize: 12 }}>Wishlist</p>
-                                <strong style={{ color: "#1A1A1A", fontSize: 28 }}>{wishlistCount}</strong>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <Button onClick={() => navigate("/order-history")} style={{ borderRadius: 999 }}>Order History</Button>
-                                <Button onClick={() => navigate("/wishlist")} style={{ borderRadius: 999 }}>Wishlist</Button>
-                            </div>
-                        </div>
-                        <WrapperInput>
-                            <WrapperLabel htmlFor="name">Name:</WrapperLabel>
-                            <InputFormComponent style={{ width: '300px' }} id="name" value={name} onChange={handleOnchangeName} />
-                            <ButtonComponent
-                                onClick={handleUpdate}
-                                size={30}
-                                styleButton={{
-                                    height: '45px',
-                                    width: 'fit-content',
-                                    border: '1px solid rgba(198,169,105,.32)',
-                                    borderRadius: '12px',
-                                    background: "#1A1A1A"
-                                }}
-                                textButton={'Cập nhật'}
-                                styleTextButton={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}
-                            />
-                        </WrapperInput>
-                        <WrapperInput>
-                            <WrapperLabel htmlFor="email">Email:</WrapperLabel>
-                            <InputFormComponent style={{ width: '300px' }} id="email" value={email} onChange={handleOnchangeEmail} />
-                            <ButtonComponent
-                                onClick={handleUpdate}
-                                size={30}
-                                styleButton={{
-                                    height: '45px',
-                                    width: 'fit-content',
-                                    border: '1px solid rgba(198,169,105,.32)',
-                                    borderRadius: '12px',
-                                    background: "#1A1A1A"
-                                }}
-                                textButton={'Cập nhật'}
-                                styleTextButton={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}
-                            />
-                        </WrapperInput>
-                        <WrapperInput>
-                            <WrapperLabel htmlFor="phone">Phone:</WrapperLabel>
-                            <InputFormComponent style={{ width: '300px' }} id="phone" value={phone} onChange={handleOnchangePhone} />
-                            <ButtonComponent
-                                onClick={handleUpdate}
-                                size={30}
-                                styleButton={{
-                                    height: '45px',
-                                    width: 'fit-content',
-                                    border: '1px solid rgba(198,169,105,.32)',
-                                    borderRadius: '12px',
-                                    background: "#1A1A1A"
-                                }}
-                                textButton={'Cập nhật'}
-                                styleTextButton={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}
-                            />
-                        </WrapperInput>
-                        <WrapperInput>
-                            <WrapperLabel htmlFor="address">Address:</WrapperLabel>
-                            <InputFormComponent style={{ width: '300px' }} id="address" value={address} onChange={handleOnchangeAddress} />
-                            <ButtonComponent
-                                onClick={handleUpdate}
-                                size={30}
-                                styleButton={{
-                                    height: '45px',
-                                    width: 'fit-content',
-                                    border: '1px solid rgba(198,169,105,.32)',
-                                    borderRadius: '12px',
-                                    background: "#1A1A1A"
-                                }}
-                                textButton={'Cập nhật'}
-                                styleTextButton={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}
-                            />
-                        </WrapperInput>
-                        <WrapperInput>
-                            <WrapperLabel htmlFor="avatar">Avatar:</WrapperLabel>
-                            <WrapperUploadFile beforeUpload={() => false} onChange={handleOnchangeAvatar} maxCount={1}>
-                                <Button icon={<UploadOutlined />}> Chọn file</Button>
-                            </WrapperUploadFile>
-                            {avatar && (
-                                <img src={avatar} style={{ height: '60px', width: '60px', borderRadius: '50%', objectFit: 'cover' }} alt="avatar" />
-                            )}
-                            <ButtonComponent
-                                onClick={handleUpdate}
-                                size={30}
-                                styleButton={{
-                                    height: '45px',
-                                    width: 'fit-content',
-                                    border: '1px solid rgba(198,169,105,.32)',
-                                    borderRadius: '12px',
-                                    background: "#1A1A1A"
-                                }}
-                                textButton={'Cập nhật'}
-                                styleTextButton={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}
-                            />
-                        </WrapperInput>
-                    </WrapperContentProfile>
-                </Loading>
-            </div>
-            <FooterComponent />
+  return (
+    <div className="profile-view">
+      <main className="container page">
+        <div className="breadcrumb">
+          <span>petshop</span>
+          <svg className="icon-sm" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+          <strong>Hồ sơ của tôi</strong>
         </div>
-    );
+
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Hồ sơ của tôi</h1>
+            <p className="sub">Quản lý thông tin tài khoản, địa chỉ và ảnh đại diện của bạn.</p>
+          </div>
+        </div>
+
+        <section className="profile-layout">
+          <aside className="sidebar-card">
+            <div className="profile-preview">
+              <div className="big-avatar">
+                {avatar ? <img src={avatar} alt="avatar" className="avatar-image" /> : <svg className="icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.6-4.2 14.4-4.2 16 0"></path></svg>}
+              </div>
+              <h2>{user?.name || "Người dùng"}</h2>
+              <p className="id">ID tài khoản: {user?.id?.slice(-8)?.toUpperCase() || "N/A"}</p>
+            </div>
+            <div className="side-menu">
+              <button className="side-link active" type="button"><svg className="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.6-4.2 14.4-4.2 16 0"></path></svg>Thông tin cá nhân</button>
+              <button className="side-link" type="button" onClick={() => navigate("/order-history")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg>Lịch sử đơn</button>
+              <button className="side-link" type="button" onClick={() => navigate("/wishlist")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9.2C1.5 7.1 3.8 4 7.2 4c2 0 3.5 1.1 4.8 2.8C13.3 5.1 14.8 4 16.8 4c3.4 0 5.7 3.1 4.2 6.8C19 15.6 12 20 12 20z"></path></svg>Yêu thích</button>
+              <button className="side-link" type="button" onClick={() => navigate("/cart")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M5 7h15l-1.4 8.2a2 2 0 0 1-2 1.7H8.2a2 2 0 0 1-2-1.6L4.6 4H2"></path><circle cx="9" cy="20" r="1.2"></circle><circle cx="17" cy="20" r="1.2"></circle></svg>Giỏ hàng</button>
+            </div>
+          </aside>
+
+          <section className="profile-card">
+            <div className="account-head">
+              <div>
+                <h2>Thông tin tài khoản</h2>
+                <p>Cập nhật thông tin cá nhân để petshop hỗ trợ đơn hàng và dịch vụ tốt hơn.</p>
+              </div>
+              <div className="head-actions">
+                <button className="small-btn" type="button" onClick={() => navigate("/order-history")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg>Lịch sử đơn</button>
+                <button className="small-btn" type="button" onClick={() => navigate("/wishlist")}><svg className="icon-sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9.2C1.5 7.1 3.8 4 7.2 4c2 0 3.5 1.1 4.8 2.8C13.3 5.1 14.8 4 16.8 4c3.4 0 5.7 3.1 4.2 6.8C19 15.6 12 20 12 20z"></path></svg>Yêu thích</button>
+              </div>
+            </div>
+
+            <hr className="divider" />
+
+            <div className="stats">
+              <div className="stat"><div><small>Đơn hàng</small><h3>{orderCount}</h3></div><div className="stat-icon"><svg className="icon-sm" viewBox="0 0 24 24"><path d="M6 3h12v18H6z"></path><path d="M9 7h6"></path><path d="M9 11h6"></path><path d="M9 15h4"></path></svg></div></div>
+              <div className="stat"><div><small>Yêu thích</small><h3>{wishlistCount}</h3></div><div className="stat-icon"><svg className="icon-sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9-9.2C1.5 7.1 3.8 4 7.2 4c2 0 3.5 1.1 4.8 2.8C13.3 5.1 14.8 4 16.8 4c3.4 0 5.7 3.1 4.2 6.8C19 15.6 12 20 12 20z"></path></svg></div></div>
+              <div className="stat"><div><small>Giỏ hàng</small><h3>{cartCount}</h3></div><div className="stat-icon"><svg className="icon-sm" viewBox="0 0 24 24"><path d="M5 7h15l-1.4 8.2a2 2 0 0 1-2 1.7H8.2a2 2 0 0 1-2-1.6L4.6 4H2"></path><circle cx="9" cy="20" r="1.2"></circle><circle cx="17" cy="20" r="1.2"></circle></svg></div></div>
+            </div>
+
+            <form onSubmit={onSubmit}>
+              <h2 className="section-title">Thông tin cá nhân</h2>
+              <div className="form-grid">
+                <div className="field"><label>Họ tên</label><input name="name" value={formData.name} onChange={onInputChange} /></div>
+                <div className="field"><label>Email</label><input name="email" value={formData.email} onChange={onInputChange} type="email" /></div>
+                <div className="field"><label>Số điện thoại</label><input name="phone" value={formData.phone} onChange={onInputChange} /></div>
+                <div className="field"><label>Ngày tham gia</label><input value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : "-"} readOnly /></div>
+              </div>
+
+              <h2 className="section-title">Địa chỉ & ảnh đại diện</h2>
+              <div className="form-grid">
+                <div className="field full"><label>Địa chỉ</label><input name="address" value={formData.address} onChange={onInputChange} /></div>
+                <div className="field full"><label>Ảnh đại diện</label><input className="file-input" type="file" accept="image/*" onChange={onAvatarChange} /></div>
+              </div>
+
+              <div className="save-row">
+                <button className="cancel-btn" type="button" onClick={() => setFormData({ name: user?.name || "", email: user?.email || "", phone: user?.phone || "", address: user?.address || "" })}>
+                  <svg className="icon-sm" viewBox="0 0 24 24"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>Hủy
+                </button>
+                <button className="save-btn" type="submit" disabled={updateMutation.isPending}>
+                  <svg className="icon-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>{updateMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+      </main>
+    </div>
+  );
 };
 
 export default ProfilePage;

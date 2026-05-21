@@ -1,12 +1,12 @@
-import { message } from "antd"
+import Toast from "../ui/feedback/Toast";
 
 const success= (mes = 'Success')=>{
-    message.success(mes);
+    Toast.success(mes);
 };
 const error= (mes = 'Error')=>{
-    message.error(mes);
+    Toast.error(mes);
 };
 const warning= (mes = 'Warning')=>{
-    message.warning(mes);
+    Toast.warning(mes);
 };
 export{success,error,warning}

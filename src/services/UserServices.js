@@ -20,7 +20,7 @@ axiosJWT.interceptors.response.use(
                 return axiosJWT(originalRequest);
             } catch (refreshError) {
                 localStorage.removeItem('access_token');
-                window.location.href = '/sign-in';
+                window.location.href = '/';
                 return Promise.reject(refreshError);
             }
         }
@@ -62,7 +62,7 @@ export const getDetailsUser = async (id, access_token) => {
     } catch (error) {
         if (error.response?.status === 401 || error.response?.status === 403) {
             localStorage.removeItem('access_token');
-            window.location.href = '/sign-in';
+            window.location.href = '/';
         }
         throw new Error(getApiErrorMessage(error, 'Không thể tải thông tin người dùng'));
     }
@@ -113,11 +113,12 @@ export const createUser = async (data, access_token) => {
     return res.data;
 };
 
-export const getAllUser = async (access_token) => {
+export const getAllUser = async (access_token, query = {}) => {
     const res = await axiosJWT.get(`${API_URL}/user/getall`, {
         headers: {
             Authorization: `Bearer ${access_token}`,
         },
+        params: query,
     });
     return res.data;
 };

@@ -30,7 +30,13 @@ export const WrapperLabel = styled.label`
 export const WrapperInput = styled.div`
     display:flex;
     align-items:center;
-     gap:12px;
+    gap:12px;
+
+    @media (max-width: 640px) {
+        flex-direction:column;
+        align-items:stretch;
+        gap:8px;
+    }
 `
 export const WrapperUploadFile = styled(Upload)`
     & .ant-upload.ant-upload-select.ant-upload-select-picture-card {

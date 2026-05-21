@@ -1,5 +1,5 @@
 import React, { Fragment, useCallback, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
 import { ConfigProvider } from 'antd';
@@ -15,7 +15,7 @@ function ProtectedRoute({ children, isPrivate, isAdminRoute }) {
   const accessToken = localStorage.getItem('access_token');
 
   if (isPrivate && !accessToken) {
-    return <Navigate to="/sign-in" />;
+    return <Navigate to="/" />;
   }
 
   let isAdminFromToken = false;
@@ -33,6 +33,23 @@ function ProtectedRoute({ children, isPrivate, isAdminRoute }) {
   }
 
   return children;
+}
+
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const target = document.getElementById(hash.replace('#', ''));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, hash]);
+
+  return null;
 }
 
 function App() {
@@ -62,7 +79,7 @@ function App() {
     } catch (error) {
       console.error('Lỗi lấy thông tin người dùng:', error.message);
       localStorage.removeItem('access_token');
-      window.location.href = '/sign-in';
+      window.location.href = '/';
     }
   }, [dispatch]);
 
@@ -138,6 +155,7 @@ function App() {
       <div>
         <Loading isPending={isPending}>
           <Router>
+            <ScrollToTop />
             <Routes>
               {routes.map((route) => {
                 const Page = route.page;

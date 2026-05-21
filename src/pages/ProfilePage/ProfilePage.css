@@ -1,0 +1,50 @@
+.profile-view { background: #f6efe4; color: #151515; min-height: 60vh; font-family: Inter, sans-serif; }
+.profile-view .container { width: 1180px; margin: 0 auto; }
+.profile-view .page { padding: 28px 0 70px; }
+.profile-view .icon-sm, .profile-view .icon-lg { stroke: currentColor; fill: none; stroke-width: 1.85; stroke-linecap: round; stroke-linejoin: round; }
+.profile-view .icon-sm { width: 16px; height: 16px; }
+.profile-view .icon-lg { width: 28px; height: 28px; }
+.profile-view .breadcrumb { width: max-content; max-width: 100%; display: flex; align-items: center; gap: 8px; color: #6d5840; font-size: 13px; font-weight: 800; padding: 10px 14px; border: 1px solid #dfd0bd; border-radius: 999px; background: #fffdf9; box-shadow: 0 6px 16px rgba(0,0,0,.04); margin-bottom: 18px; }
+.profile-view .page-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 22px; }
+.profile-view .page-title { font-family: "Playfair Display", serif; font-size: 52px; line-height: 1; font-weight: 600; margin-bottom: 10px; }
+.profile-view .sub { color: #6b6258; font-size: 15px; font-weight: 600; line-height: 1.7; }
+.profile-view .profile-layout { display: grid; grid-template-columns: 300px 1fr; gap: 22px; align-items: start; }
+.profile-view .sidebar-card, .profile-view .profile-card { background: #fff; border-radius: 22px; box-shadow: 0 18px 38px rgba(0,0,0,.06); border: 1px solid rgba(234,223,206,.78); }
+.profile-view .sidebar-card { padding: 22px; position: sticky; top: 148px; }
+.profile-view .profile-preview { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #eadfce; margin-bottom: 18px; }
+.profile-view .big-avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; background: #111; color: #fff; display: grid; place-items: center; box-shadow: 0 12px 25px rgba(0,0,0,.16); overflow: hidden; }
+.profile-view .avatar-image { width: 100%; height: 100%; object-fit: cover; }
+.profile-view .profile-preview h2 { font-family: "Playfair Display", serif; font-size: 28px; font-weight: 600; margin-bottom: 6px; }
+.profile-view .id { color: #8a7e72; font-size: 13px; font-weight: 800; }
+.profile-view .side-menu { display: grid; gap: 9px; }
+.profile-view .side-link { height: 42px; border: 1px solid #eadfce; border-radius: 13px; background: #fffdf9; color: #5a5048; display: flex; align-items: center; gap: 10px; padding: 0 13px; font-weight: 900; transition: .25s; cursor: pointer; }
+.profile-view .side-link.active, .profile-view .side-link:hover { background: #111; color: #fff; border-color: #111; }
+.profile-view .profile-card { padding: 28px; }
+.profile-view .account-head { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 18px; }
+.profile-view .account-head h2, .profile-view .section-title { font-family: "Playfair Display", serif; font-size: 31px; font-weight: 600; margin-bottom: 8px; }
+.profile-view .account-head p { color: #7c7064; font-size: 14px; font-weight: 700; line-height: 1.7; }
+.profile-view .head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.profile-view .small-btn { height: 38px; padding: 0 14px; border: 1px solid #dfd0bd; background: #fff; border-radius: 12px; font-weight: 900; color: #4d443c; display: flex; align-items: center; gap: 8px; transition: .25s; cursor: pointer; }
+.profile-view .small-btn:hover { background: #111; color: #fff; border-color: #111; }
+.profile-view .divider { border: 0; border-top: 1px solid #eadfce; margin: 20px 0; }
+.profile-view .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 28px; }
+.profile-view .stat { border: 1px solid #eadfce; border-radius: 16px; padding: 18px; background: #fffdf9; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.profile-view .stat small { color: #8a7e72; font-weight: 800; display: block; margin-bottom: 6px; }
+.profile-view .stat h3 { font-size: 30px; line-height: 1; }
+.profile-view .stat-icon { width: 38px; height: 38px; border-radius: 50%; background: #111; color: #fff; display: grid; place-items: center; }
+.profile-view .section-title { margin: 26px 0 18px; }
+.profile-view .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.profile-view .field { margin-bottom: 18px; }
+.profile-view .field.full { grid-column: 1 / -1; }
+.profile-view .field label { display: block; margin-bottom: 8px; font-size: 14px; color: #3d352e; font-weight: 800; }
+.profile-view .field input { width: 100%; height: 42px; border: 1px solid #dfd0bd; border-radius: 12px; padding: 0 14px; background: #fff; outline: none; color: #5f554c; font-weight: 600; transition: .25s; }
+.profile-view .field input:focus { border-color: #b98c54; box-shadow: 0 0 0 4px rgba(175,124,71,.12); }
+.profile-view .file-input { padding-top: 10px !important; height: 44px !important; }
+.profile-view .save-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.profile-view .save-btn, .profile-view .cancel-btn { height: 44px; padding: 0 22px; border-radius: 12px; font-weight: 900; display: flex; align-items: center; gap: 8px; transition: .25s; cursor: pointer; }
+.profile-view .save-btn { border: 0; background: #111; color: #fff; }
+.profile-view .cancel-btn { border: 1px solid #dfd0bd; background: #fff; color: #4d443c; }
+.profile-view .save-btn:hover, .profile-view .cancel-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.08); }
+@media (max-width: 1180px) { .profile-view .container { width: calc(100% - 40px); } .profile-view .profile-layout { grid-template-columns: 260px 1fr; } .profile-view .stats { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .profile-view .container { width: calc(100% - 32px); } .profile-view .page-head, .profile-view .account-head { align-items: flex-start; flex-direction: column; } .profile-view .profile-layout { grid-template-columns: 1fr; } .profile-view .sidebar-card { position: static; } .profile-view .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .profile-view .breadcrumb { border-radius: 16px; align-items: flex-start; flex-wrap: wrap; } .profile-view .page-title { font-size: 40px; } .profile-view .profile-card, .profile-view .sidebar-card { padding: 18px; border-radius: 18px; } .profile-view .save-row { flex-direction: column; } .profile-view .save-btn, .profile-view .cancel-btn { justify-content: center; } }
