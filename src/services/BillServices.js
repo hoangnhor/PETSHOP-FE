@@ -2,7 +2,7 @@ import { axiosJWT } from "./UserServices";
 import { API_URL } from "./apiConfig";
 
 const authHeader = (access_token) => ({
-    Authorization: `Bearer ${access_token}`,
+    ...(access_token ? { Authorization: `Bearer ${access_token}` } : {}),
 });
 
 export const createBill = async (data, access_token) => {

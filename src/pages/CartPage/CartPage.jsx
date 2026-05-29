@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
@@ -7,6 +7,7 @@ import * as CartServices from "../../services/CartServices";
 import * as CouponServices from "../../services/CouponServices";
 import * as message from "../../components/Message/Message";
 import { ConfirmDialog, EmptyState, PetshopIcon } from "../../components/ui";
+import { readLocalArray } from "../../utils/localStorage";
 import "./CartPage.css";
 
 const FREE_SHIP_THRESHOLD = 499000;
@@ -40,11 +41,12 @@ const CartPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
-  const [cartItems, setCartItems] = useState(() => normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]")));
+  const [cartItems, setCartItems] = useState(() => normalizeCartItems(readLocalArray("cartItems")));
   const [discountCode, setDiscountCode] = useState(() => localStorage.getItem("cart_coupon_code") || "");
   const [appliedCoupon, setAppliedCoupon] = useState(() => localStorage.getItem("cart_coupon_code") || "");
   const [validatedCoupon, setValidatedCoupon] = useState(null);
   const [pendingRemoveId, setPendingRemoveId] = useState("");
+  const syncWarningShownRef = useRef(false);
 
   const suggestQuery = useQuery({ queryKey: ["cart-suggest"], queryFn: () => ProductServices.getAllProduct({ limit: 8 }) });
   const serverCartQuery = useQuery({
@@ -56,7 +58,7 @@ const CartPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverCartQuery.data?.data?.items || [];
-    const localItems = normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]"));
+    const localItems = normalizeCartItems(readLocalArray("cartItems"));
 
     if (!serverItems.length && localItems.length) {
       CartServices.updateMyCart(
@@ -67,7 +69,12 @@ const CartPage = () => {
           couponCode: appliedCoupon || "",
         },
         user.access_token
-      ).catch(() => {});
+      ).catch((error) => {
+        if (!syncWarningShownRef.current) {
+          syncWarningShownRef.current = true;
+          message.warning(error?.message || "Không thể đồng bộ giỏ hàng, đang dùng dữ liệu trên máy");
+        }
+      });
       return;
     }
 
@@ -188,15 +195,26 @@ const CartPage = () => {
 
   const removeItem = () => {
     if (!pendingRemoveId) return;
+    const removingId = pendingRemoveId;
+    const previousItems = cartItems;
     const nextItems = cartItems.filter((item) => item.idsp !== pendingRemoveId);
     syncCart(nextItems);
-    if (isLoggedIn) {
-      CartServices.removeCartItem(pendingRemoveId, user.access_token).catch(() => {
-        syncCartMutation.mutate(nextItems);
-      });
-    }
     setPendingRemoveId("");
-    message.success("Đã xóa sản phẩm khỏi giỏ hàng");
+    if (!isLoggedIn) {
+      message.success("Đã xóa sản phẩm khỏi giỏ hàng");
+      return;
+    }
+    CartServices.removeCartItem(removingId, user.access_token)
+      .then((response) => {
+        if (response?.status !== "OK") {
+          throw new Error(response?.message || "Không thể đồng bộ xóa sản phẩm");
+        }
+        message.success("Đã xóa sản phẩm khỏi giỏ hàng");
+      })
+      .catch((error) => {
+        syncCart(previousItems);
+        message.error(error?.message || "Không thể đồng bộ xóa sản phẩm");
+      });
   };
 
   const addSuggestedToCart = (event, item) => {
@@ -229,13 +247,37 @@ const CartPage = () => {
   };
 
   const clearCart = () => {
+    const previousItems = cartItems;
+    const previousAppliedCoupon = appliedCoupon;
+    const previousDiscountCode = discountCode;
+    const previousValidatedCoupon = validatedCoupon;
+
     syncCart([]);
     setAppliedCoupon("");
     setValidatedCoupon(null);
     setDiscountCode("");
     localStorage.removeItem("cart_coupon_code");
-    if (isLoggedIn) CartServices.clearMyCart(user.access_token).catch(() => {});
-    message.success("Đã xóa giỏ hàng");
+    if (!isLoggedIn) {
+      message.success("Đã xóa giỏ hàng");
+      return;
+    }
+    CartServices.clearMyCart(user.access_token)
+      .then((response) => {
+        if (response?.status !== "OK") {
+          throw new Error(response?.message || "Không thể đồng bộ xóa giỏ hàng");
+        }
+        message.success("Đã xóa giỏ hàng");
+      })
+      .catch((error) => {
+        syncCart(previousItems);
+        setAppliedCoupon(previousAppliedCoupon);
+        setValidatedCoupon(previousValidatedCoupon);
+        setDiscountCode(previousDiscountCode);
+        if (previousAppliedCoupon) {
+          localStorage.setItem("cart_coupon_code", previousAppliedCoupon);
+        }
+        message.error(error?.message || "Không thể đồng bộ xóa giỏ hàng");
+      });
   };
 
   const canCheckout = cartItems.length > 0 && cartItems.every((item) => getStock(item) > 0 && Number(item.quantity || 0) <= getStock(item));

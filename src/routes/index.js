@@ -17,7 +17,9 @@ import PolicyPage from "../pages/PolicyPage/PolicyPage";
 import OrderSuccessPage from "../pages/OrderSuccessPage/OrderSuccessPage";
 import OrderDetailPage from "../pages/OrderDetailPage/OrderDetailPage";
 import SearchResultsPage from "../pages/SearchResultsPage/SearchResultsPage";
-import AuthRedirectPage from "../pages/AuthRedirectPage/AuthRedirectPage";
+import LoginPage from "../pages/LoginPage/LoginPage";
+import RegisterPage from "../pages/RegisterPage/RegisterPage";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage/ForgotPasswordPage";
 import StyleGuidePage from "../pages/StyleGuidePage/StyleGuidePage";
 import UiStatesPage from "../pages/UiStatesPage/UiStatesPage";
 import MyAppointmentsPage from "../pages/MyAppointmentsPage/MyAppointmentsPage";
@@ -30,9 +32,9 @@ export const routes = [
   { path: "/checkout", page: CheckoutPage, isShowHeader: true, isPrivate: true },
   { path: "/order-success", page: OrderSuccessPage, isShowHeader: true, isPrivate: true },
   { path: "/products", page: ProductsPage, isShowHeader: true },
-  { path: "/login", page: AuthRedirectPage, isShowHeader: true },
-  { path: "/register", page: AuthRedirectPage, isShowHeader: true },
-  { path: "/forgot-password", page: AuthRedirectPage, isShowHeader: true },
+  { path: "/login", page: LoginPage, isShowHeader: true },
+  { path: "/register", page: RegisterPage, isShowHeader: true },
+  { path: "/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
   { path: "/products/:speciesSlug/:typeSlug/:subSlug", page: ProductsPage, isShowHeader: true },
   { path: "/search", page: SearchResultsPage, isShowHeader: true },
   { path: "/search-results", page: SearchResultsPage, isShowHeader: true },

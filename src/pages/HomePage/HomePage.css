@@ -138,6 +138,15 @@
 .home-page .add-cart:hover{background:#a97840}
 .home-page .add-cart:disabled{background:#8f867c;cursor:not-allowed}
 .home-page .quick{width:38px;height:38px;border:1px solid #eadfce;background:#fff;border-radius:11px;cursor:pointer;color:#6d5840;display:grid;place-items:center;transition:.22s ease}
+.home-page .title,
+.home-page .price,
+.home-page .old-price,
+.home-page .stock-inline,
+.home-page .selled-inline,
+.home-page .add-cart {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .home-page .quick:hover{background:#151515;border-color:#151515;color:#fff;transform:translateY(-1px)}
 .home-page .quick.icon-drop-pop svg{animation:home-drop-pop .52s cubic-bezier(.2,.75,.22,1)}
 .home-page .quick.icon-drop-pop::before{
@@ -239,6 +248,7 @@
   .home-page .services,.home-page .service-main,.home-page .newsletter { grid-template-columns:1fr; display:grid; }
   .home-page .subscribe { min-width:0; width:100%; }
   .home-page .service-main img { width:100%; height:260px; }
+  .home-page .service-list { grid-template-columns: 1fr; gap: 10px; }
 }
 
 @media (max-width: 620px) {
@@ -247,10 +257,52 @@
   .home-page .hero-photo { width:100%; height:300px; }
   .home-page .hero-note { right:0; top:22px; }
   .home-page .deal-card { left:0; bottom:24px; }
-  .home-page .trust-grid,.home-page .grid,.home-page .reviews,.home-page .stats,.home-page .categories { grid-template-columns:1fr; }
+  .home-page .trust-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .home-page .trust-item { justify-content: center; }
+  .home-page .trust-item span { display: none; }
+  .home-page .reviews { grid-template-columns: 1fr; }
+  .home-page .stats { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+  .home-page .stat { padding:10px 6px; border-radius:12px; }
+  .home-page .stat strong { font-size:18px; margin-bottom:3px; line-height:1.1; }
+  .home-page .stat span { font-size:10px; line-height:1.25; }
+  .home-page .categories { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .home-page .cat { padding:14px 8px; border-radius:12px; }
+  .home-page .cat-icon { height:28px; margin-bottom:8px; }
+  .home-page .cat-icon svg { width:24px; height:24px; }
+  .home-page .cat h3 { font-size:13px; margin-bottom:3px; }
+  .home-page .cat span { display:none; }
+  .home-page .tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; width:100%; }
+  .home-page .tabs button { width:100%; padding:0 6px; font-size:12px; justify-content:center; }
+  .home-page .grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .home-page .product-media { height:auto; aspect-ratio:1 / 1; }
+  .home-page .product img { width:100%; height:100%; object-fit:cover; object-position:center; }
+  .home-page .title {
+    font-size:16px;
+    min-height:auto;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .home-page .rating-stock-row { align-items:flex-start; }
+  .home-page .stock-inline,
+  .home-page .selled-inline { white-space:normal; text-align:right; }
+  .home-page .selled-inline { display:inline-flex !important; }
+  .home-page .card-actions { grid-template-columns:minmax(0,1fr) auto; }
+  .home-page .add-cart { min-width:0; padding-inline:8px; font-size:12px; }
+  .home-page .price { font-size:20px; }
+  .home-page .meta,
+  .home-page .stock-inline { display:none; }
+  .home-page .add-cart { font-size:0; gap:0; }
+  .home-page .add-cart .petshop-icon { width:16px; height:16px; }
   .home-page .flash-top,.home-page .section-head { flex-direction:column; align-items:flex-start; }
   .home-page .timer { width:100%; min-width:0; }
   .home-page .service-main { padding:20px; }
+  .home-page .service-list { grid-template-columns: 1fr; gap: 8px; }
+  .home-page .service-item { padding: 10px 8px; border-radius: 12px; }
+  .home-page .service-item h4 { font-size: 12px; margin-bottom: 6px; flex-direction: row; gap: 6px; text-align: left; justify-content: flex-start; }
+  .home-page .service-item p { display: block; font-size: 11px; line-height: 1.45; }
+  .home-page .service-svg { width: 18px; height: 18px; }
   .home-page .newsletter { padding:24px; }
   .home-page .subscribe { flex-direction:column; }
 }

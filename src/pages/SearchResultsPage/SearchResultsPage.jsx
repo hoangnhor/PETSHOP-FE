@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
@@ -7,6 +7,7 @@ import * as CartServices from "../../services/CartServices";
 import * as WishlistServices from "../../services/WishlistServices";
 import * as message from "../../components/Message/Message";
 import { EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
+import { readLocalArray } from "../../utils/localStorage";
 import "./SearchResultsPage.css";
 
 const firstImage = (image = "") =>
@@ -38,21 +39,15 @@ const getProductRating = (product = {}) => {
   return Number(base.toFixed(1));
 };
 
-const readLocalArray = (key) => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    return [];
-  }
-};
-
 const SearchResultsPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
   const [searchParams] = useSearchParams();
   const keyword = (searchParams.get("keyword") || "").trim();
+  const [wishlistIds, setWishlistIds] = useState(() =>
+    readLocalArray("wishlistItems").map((item) => item?.idsp).filter(Boolean)
+  );
 
   const resultQuery = useQuery({
     queryKey: ["search-results", keyword],
@@ -61,8 +56,20 @@ const SearchResultsPage = () => {
   });
 
   const results = useMemo(() => resultQuery.data?.data || [], [resultQuery.data?.data]);
+  useEffect(() => {
+    const syncWishlist = () => {
+      setWishlistIds(readLocalArray("wishlistItems").map((item) => item?.idsp).filter(Boolean));
+    };
+    syncWishlist();
+    window.addEventListener("storage", syncWishlist);
+    window.addEventListener("wishlist-updated", syncWishlist);
+    return () => {
+      window.removeEventListener("storage", syncWishlist);
+      window.removeEventListener("wishlist-updated", syncWishlist);
+    };
+  }, []);
 
-  const handleToggleWishlist = (event, product) => {
+  const handleToggleWishlist = async (event, product) => {
     event.stopPropagation();
     const items = readLocalArray("wishlistItems");
     const existed = items.some((item) => item.idsp === product._id);
@@ -80,18 +87,26 @@ const SearchResultsPage = () => {
             category: product?.type?.name,
           },
         ];
+    const previousItems = items;
     localStorage.setItem("wishlistItems", JSON.stringify(nextItems));
     window.dispatchEvent(new Event("wishlist-updated"));
     if (isLoggedIn) {
-      const action = existed
-        ? WishlistServices.removeWishlistItem(product._id, user.access_token)
-        : WishlistServices.addWishlistItem({ productId: product._id }, user.access_token);
-      action.catch(() => {});
+      try {
+        const action = existed
+          ? WishlistServices.removeWishlistItem(product._id, user.access_token)
+          : WishlistServices.addWishlistItem({ productId: product._id }, user.access_token);
+        await action;
+      } catch (error) {
+        localStorage.setItem("wishlistItems", JSON.stringify(previousItems));
+        window.dispatchEvent(new Event("wishlist-updated"));
+        message.error(error?.message || "Không thể đồng bộ yêu thích");
+        return;
+      }
     }
     message.success(existed ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
   };
 
-  const handleAddCart = (event, product) => {
+  const handleAddCart = async (event, product) => {
     event.stopPropagation();
     const stock = Number(product?.countInStock || 0);
     if (stock <= 0) return;
@@ -116,15 +131,23 @@ const SearchResultsPage = () => {
             category: product?.type?.name,
           },
         ];
+    const previousItems = items;
     localStorage.setItem("cartItems", JSON.stringify(nextItems));
     window.dispatchEvent(new Event("cart-updated"));
     if (isLoggedIn) {
-      CartServices.updateMyCart(
-        {
-          items: nextItems.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
-        },
-        user.access_token
-      ).catch(() => {});
+      try {
+        await CartServices.updateMyCart(
+          {
+            items: nextItems.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
+          },
+          user.access_token
+        );
+      } catch (error) {
+        localStorage.setItem("cartItems", JSON.stringify(previousItems));
+        window.dispatchEvent(new Event("cart-updated"));
+        message.error(error?.message || "Không thể đồng bộ giỏ hàng");
+        return;
+      }
     }
     message.success("Đã thêm vào giỏ hàng");
   };
@@ -151,7 +174,6 @@ const SearchResultsPage = () => {
               const finalPrice = getFinalPrice(product);
               const basePrice = Number(product?.price || 0);
               const inStock = Number(product?.countInStock || 0) > 0;
-              const wishlistIds = readLocalArray("wishlistItems").map((item) => item.idsp);
               const isFavorite = wishlistIds.includes(product?._id);
               const rating = getProductRating(product);
               const filledStars = Math.round(rating);

@@ -75,6 +75,12 @@
   .search-results-view .page-title { font-size: 40px; }
 }
 @media (max-width: 560px) {
-  .search-results-view .results-grid { grid-template-columns: 1fr; }
+  .search-results-view .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .search-results-view .product img, .search-results-view .product-media { height: 170px; }
+  .search-results-view .title { font-size: 16px; min-height: 40px; max-height: 40px; }
+  .search-results-view .price { font-size: 20px; }
+  .search-results-view .meta, .search-results-view .stock-inline { display:none; }
+  .search-results-view .add-cart { font-size:0; gap:0; }
+  .search-results-view .add-cart .petshop-icon { width:16px; height:16px; }
   .search-results-view .breadcrumb { border-radius: 16px; align-items: flex-start; flex-wrap: wrap; }
 }

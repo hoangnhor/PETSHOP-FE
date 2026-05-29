@@ -2,38 +2,24 @@ import React, { Fragment, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { jwtDecode } from 'jwt-decode';
-import { ConfigProvider } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import DefaultComponents from './components/DefaultComponents/DefaultComponents';
 import Loading from './components/LoadingComponent/Loading';
 import { routes } from './routes';
 import * as UserServices from './services/UserServices';
-import * as CartServices from './services/CartServices';
-import * as WishlistServices from './services/WishlistServices';
-import { updateUser } from './redux/slides/userSlider';
-import { isJsonString } from './utils';
+import { resetUser, updateUser } from './redux/slides/userSlider';
+import { clearAccessToken, getAccessToken, hasAuthSessionMarker, setAccessToken } from './services/authToken';
+import { clearAuthMergeMarkers } from './constants/authSync';
+import { mergeGuestCartOnLogin, mergeGuestWishlistOnLogin } from './services/authMergeServices';
+import ToastProvider from './components/ui/feedback/ToastProvider';
 
-function ProtectedRoute({ children, isPrivate, isAdminRoute }) {
+function ProtectedRoute({ children, isPrivate, isAdminRoute, authReady }) {
   const user = useSelector((state) => state.user);
-  const accessToken = localStorage.getItem('access_token');
+  const hasAccessToken = Boolean(user?.access_token);
 
-  if (isPrivate && !accessToken) {
-    return <Navigate to="/" />;
-  }
-
-  let isAdminFromToken = false;
-  if (accessToken) {
-    try {
-      const token = isJsonString(accessToken) ? JSON.parse(accessToken) : accessToken;
-      isAdminFromToken = Boolean(jwtDecode(token)?.isAdmin);
-    } catch (error) {
-      isAdminFromToken = false;
-    }
-  }
-
-  if (isAdminRoute && !user.isAdmin && !isAdminFromToken) {
-    return <Navigate to="/" />;
-  }
-
+  if (isPrivate && !authReady) return null;
+  if (isPrivate && !hasAccessToken) return <Navigate to="/" />;
+  if (isAdminRoute && !user?.isAdmin) return <Navigate to="/" />;
   return children;
 }
 
@@ -56,194 +42,142 @@ function ScrollToTop() {
 
 function App() {
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.user);
   const [isPending, setIsLoading] = useState(false);
-  const CART_MERGE_MARKER = 'cart_login_merge_token';
-  const WISHLIST_MERGE_MARKER = 'wishlist_login_merge_token';
+  const [authReady, setAuthReady] = useState(false);
 
-  const handleDecoded = useCallback(() => {
-    let storageData = localStorage.getItem('access_token');
-    let decoded = {};
-    if (storageData) {
-      try {
-        storageData = isJsonString(storageData) ? JSON.parse(storageData) : storageData;
-        decoded = jwtDecode(storageData);
-      } catch (error) {
-        console.error('Token không hợp lệ:', error);
-        localStorage.removeItem('access_token');
-        return { decoded: null, storageData: null };
-      }
-    }
-    return { decoded, storageData };
+  const reportMergeError = useCallback((scope, error) => {
+    const message = error?.message || `Không thể đồng bộ ${scope}`;
+    console.warn(`[auth-merge:${scope}]`, message, error);
   }, []);
 
-  const handleGetDetailsUser = useCallback(async (id, token) => {
+  const decodeToken = useCallback((token) => {
     try {
+      if (!token) return null;
+      return jwtDecode(token);
+    } catch (error) {
+      return null;
+    }
+  }, []);
+
+  const syncUserToken = useCallback(
+    (token, decoded = null) => {
+      const parsedDecoded = decoded || decodeToken(token);
+      dispatch(
+        updateUser({
+          id: parsedDecoded?.id || user?.id || '',
+          name: user?.name || (parsedDecoded?.email ? 'Tài khoản' : ''),
+          email: parsedDecoded?.email || user?.email || '',
+          phone: user?.phone || '',
+          address: user?.address || '',
+          avatar: user?.avatar || '',
+          access_token: token || '',
+          isAdmin: Boolean(parsedDecoded?.isAdmin),
+        })
+      );
+    },
+    [decodeToken, dispatch, user]
+  );
+
+  const handleGetDetailsUser = useCallback(
+    async (id, token) => {
       const res = await UserServices.getDetailsUser(id, token);
       dispatch(updateUser({ ...res?.data, access_token: token }));
-    } catch (error) {
-      console.error('Lỗi lấy thông tin người dùng:', error.message);
-      localStorage.removeItem('access_token');
-      window.location.href = '/';
-    }
-  }, [dispatch]);
+    },
+    [dispatch]
+  );
 
-  const mergeGuestCartAfterLogin = useCallback(async (token) => {
+  const mergeGuestCartAfterLogin = useCallback(async (token, userMarker) => {
     try {
-      const mergeMarker = localStorage.getItem(CART_MERGE_MARKER);
-      if (mergeMarker === token) return;
-
-      const localItems = JSON.parse(localStorage.getItem('cartItems') || '[]')
-        .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0)
-        .map((item) => ({
-          idsp: item.idsp,
-          quantity: Number(item.quantity || 1),
-          name: item.name || '',
-          image: item.image || '',
-          price: Number(item.price || 0),
-          discount: Number(item.discount || 0),
-          countInStock: Number(item.countInStock || 0),
-          category: item.category || 'Sản phẩm',
-        }));
-
-      if (!localItems.length) {
-        localStorage.setItem(CART_MERGE_MARKER, token);
-        return;
-      }
-
-      const serverRes = await CartServices.getMyCart(token);
-      const serverItems = (serverRes?.data?.items || []).map((item) => ({
-        idsp: item.productId,
-        quantity: Number(item.quantity || 1),
-        name: item.name || '',
-        image: item.image || '',
-        price: Number(item.price || 0),
-        discount: Number(item.discount || 0),
-        countInStock: Number(item.countInStock || 0),
-        category: item.category || 'Sản phẩm',
-      }));
-
-      const mergedMap = new Map();
-      serverItems.forEach((item) => {
-        mergedMap.set(item.idsp, { ...item });
-      });
-      localItems.forEach((item) => {
-        const existed = mergedMap.get(item.idsp);
-        if (!existed) {
-          mergedMap.set(item.idsp, { ...item });
-          return;
-        }
-        mergedMap.set(item.idsp, { ...existed, quantity: Number(existed.quantity || 0) + Number(item.quantity || 0) });
-      });
-
-      const mergedItems = Array.from(mergedMap.values()).filter((item) => item.idsp && Number(item.quantity || 0) > 0);
-      await CartServices.updateMyCart(
-        {
-          items: mergedItems.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
-        },
-        token
-      );
-
-      localStorage.setItem('cartItems', JSON.stringify(mergedItems));
-      localStorage.setItem(CART_MERGE_MARKER, token);
-      window.dispatchEvent(new Event('cart-updated'));
+      await mergeGuestCartOnLogin(token, userMarker);
     } catch (error) {
-      // Giữ dữ liệu local để tránh mất giỏ nếu merge thất bại
+      // Giữ dữ liệu local để tránh mất giỏ nếu merge thất bại.
+      reportMergeError('cart', error);
     }
-  }, []);
+  }, [reportMergeError]);
 
-  const mergeGuestWishlistAfterLogin = useCallback(async (token) => {
+  const mergeGuestWishlistAfterLogin = useCallback(async (token, userMarker) => {
     try {
-      const mergeMarker = localStorage.getItem(WISHLIST_MERGE_MARKER);
-      if (mergeMarker === token) return;
-
-      const localWishlistItems = JSON.parse(localStorage.getItem('wishlistItems') || '[]').filter((item) => item?.idsp);
-      const localIds = [...new Set(localWishlistItems.map((item) => String(item.idsp)))];
-
-      if (!localIds.length) {
-        localStorage.setItem(WISHLIST_MERGE_MARKER, token);
-        return;
-      }
-
-      const serverRes = await WishlistServices.getMyWishlist(token);
-      const serverIds = (serverRes?.data?.productIds || [])
-        .map((item) => {
-          if (typeof item === 'string') return item;
-          return item?._id || item?.id || item?.productId || '';
-        })
-        .filter(Boolean)
-        .map((id) => String(id));
-
-      const serverSet = new Set(serverIds);
-      const missingIds = localIds.filter((id) => !serverSet.has(id));
-
-      if (missingIds.length) {
-        await Promise.all(missingIds.map((id) => WishlistServices.addWishlistItem(id, token).catch(() => null)));
-      }
-
-      localStorage.setItem('wishlistItems', JSON.stringify(localWishlistItems));
-      localStorage.setItem(WISHLIST_MERGE_MARKER, token);
-      window.dispatchEvent(new Event('wishlist-updated'));
+      await mergeGuestWishlistOnLogin(token, userMarker);
     } catch (error) {
-      // Giữ local wishlist để tránh mất dữ liệu nếu merge thất bại
+      // Giữ local wishlist để tránh mất dữ liệu nếu merge thất bại.
+      reportMergeError('wishlist', error);
     }
-  }, []);
+  }, [reportMergeError]);
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
+    const bootstrapAuth = async () => {
       setIsLoading(true);
       try {
-        const { storageData, decoded } = handleDecoded();
-        const currentTime = new Date().getTime() / 1000;
+        let token = getAccessToken();
+        const decoded = decodeToken(token);
+        const now = Date.now() / 1000;
 
-        if (decoded?.id && decoded?.exp > currentTime && storageData) {
-          await mergeGuestCartAfterLogin(storageData);
-          await mergeGuestWishlistAfterLogin(storageData);
-          await handleGetDetailsUser(decoded.id, storageData);
-        } else if (storageData) {
-          const data = await UserServices.refreshToken();
-          const newAccessToken = data?.access_token;
-          if (!newAccessToken) throw new Error('Không thể làm mới phiên đăng nhập');
+        const shouldTryRefresh = hasAuthSessionMarker();
+        if ((!token || !decoded?.exp || decoded.exp <= now) && shouldTryRefresh) {
+          const refreshRes = await UserServices.refreshToken();
+          token = refreshRes?.access_token || '';
+        }
 
-          localStorage.setItem('access_token', JSON.stringify(newAccessToken));
-          const refreshedDecoded = jwtDecode(newAccessToken);
-          if (refreshedDecoded?.id) {
-            await mergeGuestCartAfterLogin(newAccessToken);
-            await mergeGuestWishlistAfterLogin(newAccessToken);
-            await handleGetDetailsUser(refreshedDecoded.id, newAccessToken);
-          }
+        if (!token) throw new Error('Không có access token hợp lệ');
+
+        setAccessToken(token);
+        const parsedDecoded = decodeToken(token);
+        const userMarker = parsedDecoded?.id ? String(parsedDecoded.id) : String(parsedDecoded?.email || 'auth-user');
+
+        await mergeGuestCartAfterLogin(token, userMarker);
+        await mergeGuestWishlistAfterLogin(token, userMarker);
+
+        if (parsedDecoded?.id) {
+          await handleGetDetailsUser(parsedDecoded.id, token);
+        } else {
+          dispatch(
+            updateUser({
+              access_token: token,
+              name: 'Tài khoản',
+              email: parsedDecoded?.email || '',
+              id: parsedDecoded?.id || '',
+              isAdmin: Boolean(parsedDecoded?.isAdmin),
+            })
+          );
         }
       } catch (error) {
-        localStorage.removeItem('access_token');
+        clearAuthMergeMarkers();
+        clearAccessToken();
+        dispatch(resetUser());
       } finally {
+        setAuthReady(true);
         setIsLoading(false);
       }
     };
-    fetchUserDetails();
-  }, [handleDecoded, handleGetDetailsUser, mergeGuestCartAfterLogin, mergeGuestWishlistAfterLogin]);
+
+    bootstrapAuth();
+  }, [decodeToken, dispatch, handleGetDetailsUser, mergeGuestCartAfterLogin, mergeGuestWishlistAfterLogin]);
 
   useEffect(() => {
-    const interceptorId = UserServices.axiosJWT.interceptors.request.use(
-      async (config) => {
-        const currentTime = new Date().getTime() / 1000;
-        const { decoded, storageData } = handleDecoded();
-        config.headers = config.headers || {};
+    const syncFromTokenEvent = (event) => {
+      const nextToken = String(event?.detail || '');
+      if (!nextToken) {
+        clearAuthMergeMarkers();
+        dispatch(resetUser());
+        return;
+      }
+      syncUserToken(nextToken, decodeToken(nextToken));
+    };
 
-        if (decoded?.exp && decoded.exp < currentTime) {
-          const data = await UserServices.refreshToken();
-          const newAccessToken = data?.access_token;
-          localStorage.setItem('access_token', JSON.stringify(newAccessToken));
-          config.headers.Authorization = `Bearer ${newAccessToken}`;
-        } else if (storageData && !config.headers.Authorization) {
-          config.headers.Authorization = `Bearer ${storageData}`;
-        }
+    window.addEventListener('petshop-access-token-changed', syncFromTokenEvent);
+    return () => window.removeEventListener('petshop-access-token-changed', syncFromTokenEvent);
+  }, [decodeToken, dispatch, syncUserToken]);
 
-        return config;
-      },
-      (err) => Promise.reject(err)
-    );
-
-    return () => UserServices.axiosJWT.interceptors.request.eject(interceptorId);
-  }, [handleDecoded]);
+  useEffect(() => {
+    UserServices.setAuthFailureHandler(() => {
+      clearAuthMergeMarkers();
+      dispatch(resetUser());
+    });
+    return () => {
+      UserServices.setAuthFailureHandler(null);
+    };
+  }, [dispatch]);
 
   return (
     <ConfigProvider
@@ -261,32 +195,39 @@ function App() {
         },
       }}
     >
-      <div>
-        <Loading isPending={isPending}>
-          <Router>
-            <ScrollToTop />
-            <Routes>
-              {routes.map((route) => {
-                const Page = route.page;
-                const Layout = route.isShowHeader ? DefaultComponents : Fragment;
-                return (
-                  <Route
-                    key={route.path}
-                    path={route.path}
-                    element={
-                      <ProtectedRoute isPrivate={route.isPrivate} isAdminRoute={route.isAdmin}>
-                        <Layout>
-                          <Page />
-                        </Layout>
-                      </ProtectedRoute>
-                    }
-                  />
-                );
-              })}
-            </Routes>
-          </Router>
-        </Loading>
-      </div>
+      <AntdApp>
+        <ToastProvider />
+        <div>
+          <Loading isPending={isPending}>
+            <Router>
+              <ScrollToTop />
+              <Routes>
+                {routes.map((route) => {
+                  const Page = route.page;
+                  const Layout = route.isShowHeader ? DefaultComponents : Fragment;
+                  return (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={
+                        <ProtectedRoute
+                          isPrivate={route.isPrivate}
+                          isAdminRoute={route.isAdmin}
+                          authReady={authReady}
+                        >
+                          <Layout>
+                            <Page />
+                          </Layout>
+                        </ProtectedRoute>
+                      }
+                    />
+                  );
+                })}
+              </Routes>
+            </Router>
+          </Loading>
+        </div>
+      </AntdApp>
     </ConfigProvider>
   );
 }

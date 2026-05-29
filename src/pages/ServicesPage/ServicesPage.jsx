@@ -172,7 +172,6 @@ const ServicesPage = () => {
                     disabled={!service.slug}
                   >
                     <PetshopIcon name="eye" size={14} />
-                    Xem chi tiết & đặt lịch
                   </button>
                 </div>
               </article>

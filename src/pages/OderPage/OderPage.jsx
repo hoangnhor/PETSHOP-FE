@@ -7,6 +7,7 @@ import * as BillServices from "../../services/BillServices";
 import * as message from "../../components/Message/Message";
 import Loading from "../../components/LoadingComponent/Loading";
 import PageContainer from "../../components/PageContainer/PageContainer";
+import { readLocalArray } from "../../utils/localStorage";
 
 const orderStatusMap = {
     pending: { text: "Chờ xác nhận", color: "gold" },
@@ -18,7 +19,7 @@ const orderStatusMap = {
 
 const OderPage = () => {
     const user = useSelector((state) => state.user);
-    const [cartItems, setCartItems] = useState(() => JSON.parse(localStorage.getItem("cartItems") || "[]"));
+    const [cartItems, setCartItems] = useState(() => readLocalArray("cartItems"));
     const [form] = Form.useForm();
 
     useEffect(() => {

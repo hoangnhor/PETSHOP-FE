@@ -211,6 +211,27 @@
   gap: 20px;
   margin-bottom: 22px;
 }
+.products-view .head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.products-view .filter-toggle {
+  display: none;
+  height: 38px;
+  border: 1px solid #dfd0bd;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 14px;
+  color: #5a5048;
+  font-weight: 800;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.products-view .filter-backdrop {
+  display: none;
+}
 
 .products-view .product-head-left .petshop-breadcrumb {
   width: max-content;
@@ -461,6 +482,14 @@
   overflow: hidden;
   margin-bottom: 8px;
   font-weight: 600;
+}
+.products-view .title,
+.products-view .price,
+.products-view .old-price,
+.products-view .stock-inline,
+.products-view .add-cart {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .products-view .rating-stock-row {
@@ -744,8 +773,79 @@
     width: calc(100% - 32px);
   }
 
+  .products-view .page {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-top: 8px;
+  }
+
+  .products-view .filter-toggle {
+    display: inline-flex;
+  }
+
   .products-view .sidebar {
-    position: static;
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    width: min(84vw, 320px);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    z-index: 60;
+    border-radius: 0;
+    border: 0;
+    border-right: 1px solid rgba(234, 223, 206, 0.9);
+    box-shadow: 12px 0 28px rgba(0, 0, 0, 0.16);
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    padding: 76px 14px calc(28px + env(safe-area-inset-bottom));
+    pointer-events: auto;
+    scrollbar-width: thin;
+  }
+  .products-view .sidebar-scroll {
+    height: auto;
+    max-height: none;
+    overflow: visible !important;
+    padding: 0;
+  }
+  .products-view .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .products-view .sidebar.closed {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+  .products-view .sidebar.open {
+    display: flex;
+    transform: translateX(0);
+  }
+
+  .products-view .sidebar .clear-btn {
+    margin-bottom: 16px;
+  }
+
+  .products-view .filter-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 55;
+    transition: opacity 0.2s ease;
+  }
+  .products-view .filter-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .products-view .shop-title-row {
@@ -756,11 +856,18 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .products-view .content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
 
   .products-view .shop-sort,
   .products-view .sort {
-    width: 100%;
+    width: auto;
   }
 
   .products-view .grid {
@@ -783,11 +890,11 @@
   .products-view .page {
     grid-template-columns: 1fr;
     gap: 14px;
-    padding: 20px 0 44px;
+    padding: 8px 0 44px;
   }
 
   .products-view .sidebar {
-    padding: 14px 12px;
+    padding: 76px 14px calc(28px + env(safe-area-inset-bottom)) !important;
   }
 
   .products-view .product-head h1 {
@@ -797,11 +904,60 @@
 
 @media (max-width: 560px) {
   .products-view .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .products-view .product img,
   .products-view .image-placeholder {
-    height: 260px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .products-view .title {
+    font-size: 16px;
+    min-height: auto;
+    max-height: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .products-view .price {
+    font-size: 20px;
+  }
+
+  .products-view .rating-stock-row {
+    align-items: flex-start;
+  }
+
+  .products-view .stock-inline {
+    white-space: normal;
+    text-align: right;
+  }
+
+  .products-view .card-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .products-view .add-cart {
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .products-view .meta,
+  .products-view .stock-inline {
+    display: none;
+  }
+  .products-view .add-cart {
+    font-size: 0;
+    gap: 0;
+  }
+  .products-view .add-cart .petshop-icon {
+    width: 16px;
+    height: 16px;
   }
 }

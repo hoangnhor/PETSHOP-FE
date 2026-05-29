@@ -7,18 +7,9 @@ import * as CartServices from "../../services/CartServices";
 import * as WishlistServices from "../../services/WishlistServices";
 import * as message from "../../components/Message/Message";
 import { getMappedProductImage } from "../../utils/productImageMap";
+import { readLocalArray } from "../../utils/localStorage";
 import { EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
 import "./ProductDetailsPage.css";
-
-const readLocalArray = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    const parsed = JSON.parse(raw || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    return [];
-  }
-};
 
 const formatPrice = (value) => `${Number(value || 0).toLocaleString("vi-VN")}đ`;
 
@@ -516,7 +507,6 @@ const ProductDetailsPage = () => {
                   </article>
                 );
               }
-              const inStock = Number(item?.countInStock || 0) > 0;
               return (
                 <article key={item._id || `related-${index}`} className="product">
                   <button className="heart" type="button" aria-label="Thêm vào yêu thích" onClick={(event) => toggleRelatedWishlist(event, item)}>
@@ -526,7 +516,6 @@ const ProductDetailsPage = () => {
                   <div className="body">
                     <h3 className="title">{item?.name}</h3>
                     <div className="product-price">{formatPrice(Math.round(Number(item?.price || 0) * (1 - Number(item?.discount || 0) / 100)))}</div>
-                    <div className="meta"><span>Giao hàng tiêu chuẩn</span><span>{inStock ? "Còn hàng" : "Hết hàng"}</span></div>
                     <div className="card-actions">
                       <button
                         className="add-cart"
@@ -592,7 +581,6 @@ const ProductDetailsPage = () => {
                         }}
                       >
                         <PetshopIcon name="cart" size={16} className="petshop-icon" />
-                        Thêm vào giỏ
                       </button>
                       <button
                         className="quick-view"

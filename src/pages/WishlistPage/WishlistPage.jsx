@@ -7,6 +7,7 @@ import * as WishlistServices from "../../services/WishlistServices";
 import * as CartServices from "../../services/CartServices";
 import * as message from "../../components/Message/Message";
 import { ConfirmDialog, EmptyState, PetshopIcon } from "../../components/ui";
+import { readLocalArray } from "../../utils/localStorage";
 import "./WishlistPage.css";
 
 const formatMoney = (value) => `${Math.round(Number(value || 0)).toLocaleString("vi-VN")}đ`;
@@ -16,7 +17,7 @@ const WishlistPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
-  const [items, setItems] = useState(() => JSON.parse(localStorage.getItem("wishlistItems") || "[]"));
+  const [items, setItems] = useState(() => readLocalArray("wishlistItems"));
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
   const suggestQuery = useQuery({ queryKey: ["wishlist-suggest"], queryFn: () => ProductServices.getAllProduct({ limit: 12 }) });
   const serverWishlistQuery = useQuery({
@@ -44,7 +45,7 @@ const WishlistPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverWishlistQuery.data?.data?.productIds || [];
-    const localItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]");
+    const localItems = readLocalArray("wishlistItems");
 
     if (!serverItems.length && localItems.length) {
       setItems(localItems);
@@ -65,7 +66,7 @@ const WishlistPage = () => {
   }, [isLoggedIn, serverWishlistQuery.data]);
 
   useEffect(() => {
-    const sync = () => setItems(JSON.parse(localStorage.getItem("wishlistItems") || "[]"));
+    const sync = () => setItems(readLocalArray("wishlistItems"));
     window.addEventListener("wishlist-updated", sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -77,30 +78,42 @@ const WishlistPage = () => {
   const clearWishlist = () => {
     const previousItems = items;
     syncItems([]);
-    if (isLoggedIn) {
-      WishlistServices.clearMyWishlist(user.access_token).catch(() => {
+    setIsConfirmClearOpen(false);
+    if (!isLoggedIn) {
+      message.success("Đã xóa toàn bộ danh sách yêu thích");
+      return;
+    }
+    WishlistServices.clearMyWishlist(user.access_token)
+      .then((response) => {
+        if (response?.status !== "OK") throw new Error(response?.message || "Không thể xóa danh sách yêu thích");
+        message.success("Đã xóa toàn bộ danh sách yêu thích");
+      })
+      .catch(() => {
         syncItems(previousItems);
         message.error("Không thể xóa danh sách yêu thích trên hệ thống");
       });
-    }
-    setIsConfirmClearOpen(false);
-    message.success("Đã xóa toàn bộ danh sách yêu thích");
   };
 
   const removeItem = (idsp) => {
     const previousItems = items;
     const nextItems = items.filter((item) => item.idsp !== idsp);
     syncItems(nextItems);
-    if (isLoggedIn) {
-      WishlistServices.removeWishlistItem(idsp, user.access_token).catch(() => {
+    if (!isLoggedIn) {
+      message.success("Đã xóa khỏi yêu thích");
+      return;
+    }
+    WishlistServices.removeWishlistItem(idsp, user.access_token)
+      .then((response) => {
+        if (response?.status !== "OK") throw new Error(response?.message || "Không thể cập nhật yêu thích");
+        message.success("Đã xóa khỏi yêu thích");
+      })
+      .catch(() => {
         syncItems(previousItems);
         message.error("Không thể cập nhật yêu thích trên hệ thống");
       });
-    }
-    message.success("Đã xóa khỏi yêu thích");
   };
 
-  const getLocalCartItems = () => JSON.parse(localStorage.getItem("cartItems") || "[]");
+  const getLocalCartItems = () => readLocalArray("cartItems");
   const addToCart = (item) => {
     const cartItems = getLocalCartItems();
     const existed = cartItems.find((cartItem) => cartItem.idsp === item.idsp);
@@ -180,17 +193,23 @@ const WishlistPage = () => {
     const previousItems = items;
     const nextItems = exists ? items.filter((wishlistItem) => wishlistItem.idsp !== id) : [...items, normalizedItem];
     syncItems(nextItems);
-    message.success(exists ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
+    if (!isLoggedIn) {
+      message.success(exists ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
+      return;
+    }
 
-    if (isLoggedIn) {
-      const task = exists
-        ? WishlistServices.removeWishlistItem(id, user.access_token)
-        : WishlistServices.addWishlistItem(id, user.access_token);
-      task.catch(() => {
+    const task = exists
+      ? WishlistServices.removeWishlistItem(id, user.access_token)
+      : WishlistServices.addWishlistItem(id, user.access_token);
+    task
+      .then((response) => {
+        if (response?.status !== "OK") throw new Error(response?.message || "Không thể đồng bộ yêu thích");
+        message.success(exists ? "Đã xóa khỏi yêu thích" : "Đã thêm vào yêu thích");
+      })
+      .catch(() => {
         syncItems(previousItems);
         message.error("Không thể đồng bộ yêu thích trên hệ thống");
       });
-    }
   };
 
   const renderCard = (item, wished = true) => {

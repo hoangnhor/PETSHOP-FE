@@ -21,3 +21,23 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 global.matchMedia = matchMediaMock;
+
+const originalConsoleError = console.error;
+beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation((...args) => {
+        const firstArg = args[0];
+        if (
+            typeof firstArg === 'string' &&
+            firstArg.includes('ReactDOMTestUtils.act is deprecated in favor of `React.act`')
+        ) {
+            return;
+        }
+        originalConsoleError(...args);
+    });
+});
+
+afterAll(() => {
+    if (console.error.mockRestore) {
+        console.error.mockRestore();
+    }
+});

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import * as CartServices from "../../services/CartServices";
 import * as CouponServices from "../../services/CouponServices";
 import * as message from "../../components/Message/Message";
 import { EmptyState, PetshopIcon } from "../../components/ui";
+import { readLocalArray, readLocalJson } from "../../utils/localStorage";
 import "./CheckoutPage.css";
 
 const SHIPPING_FEE = 30000;
@@ -41,7 +42,7 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
   const isLoggedIn = Boolean(user?.access_token);
-  const [cartItems, setCartItems] = useState(() => normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]")));
+  const [cartItems, setCartItems] = useState(() => normalizeCartItems(readLocalArray("cartItems")));
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -52,9 +53,10 @@ const CheckoutPage = () => {
     saveAddress: true,
   });
   const [validatedCoupon, setValidatedCoupon] = useState(null);
+  const syncWarningShownRef = useRef(false);
 
   useEffect(() => {
-    const savedAddress = JSON.parse(localStorage.getItem("checkout_saved_address") || "null");
+    const savedAddress = readLocalJson("checkout_saved_address", null);
     setFormData((prev) => ({
       ...prev,
       fullName: savedAddress?.fullName || user.name || "",
@@ -74,7 +76,7 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const serverItems = serverCartQuery.data?.data?.items || [];
-    const localItems = normalizeCartItems(JSON.parse(localStorage.getItem("cartItems") || "[]"));
+    const localItems = normalizeCartItems(readLocalArray("cartItems"));
 
     if (!serverItems.length && localItems.length) {
       CartServices.updateMyCart(
@@ -84,7 +86,12 @@ const CheckoutPage = () => {
             .map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
         },
         user.access_token
-      ).catch(() => {});
+      ).catch((error) => {
+        if (!syncWarningShownRef.current) {
+          syncWarningShownRef.current = true;
+          message.warning(error?.message || "Không thể đồng bộ giỏ hàng, đang dùng dữ liệu trên máy");
+        }
+      });
       setCartItems(localItems);
       return;
     }
@@ -183,7 +190,11 @@ const CheckoutPage = () => {
         localStorage.setItem("cartItems", JSON.stringify([]));
         window.dispatchEvent(new Event("cart-updated"));
         setCartItems([]);
-        if (isLoggedIn) CartServices.clearMyCart(user.access_token).catch(() => {});
+        if (isLoggedIn) {
+          CartServices.clearMyCart(user.access_token).catch((error) => {
+            message.warning(error?.message || "Đơn đã tạo nhưng chưa đồng bộ dọn giỏ hàng trên hệ thống");
+          });
+        }
         message.success("Đặt hàng thành công");
         navigate(`/order-success?orderId=${res?.data?._id || ""}`);
         return;

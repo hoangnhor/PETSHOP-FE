@@ -468,7 +468,9 @@ const HomePage = () => {
               </span>
                 </span>
               )}
-              <span className="stock-inline">{Number(product?.countInStock || 0) > 0 ? "Còn hàng" : "Hết hàng"}</span>
+              {!showSelled ? (
+                <span className="stock-inline">{Number(product?.countInStock || 0) > 0 ? "Còn hàng" : "Hết hàng"}</span>
+              ) : null}
             </div>
           ) : (
             <div className="meta">

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as ProductServices from "../../services/ProductServices";
 import CardComponent from "../CardComponent/CardComponent";
 import { getMappedProductImage } from "../../utils/productImageMap";
+import { readLocalArray } from "../../utils/localStorage";
 
 const ProductDetailsComponenet = ({ product }) => {
     const [quantity, setQuantity] = useState(1);
@@ -34,7 +35,7 @@ const ProductDetailsComponenet = ({ product }) => {
     const priceAfterDiscount = Math.round(price * (1 - discount / 100));
 
     const addToCart = (goToOrder = false) => {
-        const cartItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+        const cartItems = readLocalArray("cartItems");
         const existedItem = cartItems.find((item) => item.idsp === product._id);
         const nextQuantity = Number(quantity);
         const stock = Number(product.countInStock || 0);

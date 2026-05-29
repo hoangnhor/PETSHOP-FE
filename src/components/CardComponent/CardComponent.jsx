@@ -3,13 +3,14 @@ import { StyledNameProduct, WrapperCardStyle, WrapperDiscountText, WrapperPriceT
 import { useLocation, useNavigate } from "react-router-dom";
 import { HeartOutlined, HeartFilled, ShoppingCartOutlined } from "@ant-design/icons";
 import * as message from "../Message/Message";
+import { readLocalArray } from "../../utils/localStorage";
 
 const CardComponent = (props) => {
     const { id, image, name, price, discount = 0, countInStock = 0, category = "" } = props;
     const navigate = useNavigate();
     const location = useLocation();
     const finalPrice = Math.round(Number(price || 0) * (1 - Number(discount || 0) / 100));
-    const wishlistItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]");
+    const wishlistItems = readLocalArray("wishlistItems");
     const isFavorite = wishlistItems.some((item) => item.idsp === id);
 
     const toggleWishlist = (event) => {
@@ -28,7 +29,7 @@ const CardComponent = (props) => {
             message.error("Sản phẩm hiện đang hết hàng");
             return;
         }
-        const cartItems = JSON.parse(localStorage.getItem("cartItems") || "[]");
+        const cartItems = readLocalArray("cartItems");
         const existed = cartItems.find((item) => item.idsp === id);
         const nextItems = existed
             ? cartItems.map((item) => (item.idsp === id ? { ...item, quantity: Math.min((item.quantity || 1) + 1, countInStock) } : item))

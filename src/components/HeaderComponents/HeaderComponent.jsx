@@ -1,24 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { jwtDecode } from "jwt-decode";
-import { Form, Input, Modal, Tabs, message } from "antd";
+import { Form, Input, Modal, Tabs } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { resetUser, updateUser } from "../../redux/slides/userSlider";
 import * as UserServices from "../../services/UserServices";
 import * as CartServices from "../../services/CartServices";
 import * as WishlistServices from "../../services/WishlistServices";
+import * as message from "../../components/Message/Message";
+import { clearAccessToken, setAccessToken } from "../../services/authToken";
+import { readLocalArray } from "../../utils/localStorage";
+import { clearAuthMergeMarkers } from "../../constants/authSync";
+import {
+  buildUserMarker,
+  hydrateUserFromToken,
+  mergeGuestCartOnLogin,
+  mergeGuestWishlistOnLogin,
+} from "../../services/authMergeServices";
 import "./headerRedesign.css";
 
-const readCount = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    const parsed = JSON.parse(raw || "[]");
-    return Array.isArray(parsed) ? parsed.length : 0;
-  } catch (error) {
-    return 0;
-  }
-};
+const readCount = (key) => readLocalArray(key).length;
 
 const HeaderComponent = () => {
   const dispatch = useDispatch();
@@ -37,6 +38,8 @@ const HeaderComponent = () => {
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
   const [forgotForm] = Form.useForm();
+  const navWrapRef = useRef(null);
+  const menuToggleRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -101,6 +104,33 @@ const HeaderComponent = () => {
     return () => document.removeEventListener("click", closeOnOutside);
   }, []);
 
+  useEffect(() => {
+    const handleOutsideNav = (event) => {
+      if (window.innerWidth > 900 || !navOpen) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (navWrapRef.current?.contains(target)) return;
+      if (menuToggleRef.current?.contains(target)) return;
+      setNavOpen(false);
+    };
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        setNavOpen(false);
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideNav);
+    document.addEventListener("touchstart", handleOutsideNav, { passive: true });
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideNav);
+      document.removeEventListener("touchstart", handleOutsideNav);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [navOpen]);
+
   const goSearch = () => {
     const value = keyword.trim();
     navigate(value ? `/search?keyword=${encodeURIComponent(value)}` : "/products");
@@ -136,7 +166,8 @@ const HeaderComponent = () => {
     } catch (error) {
       // reset local state even if API logout failed to keep UI consistent
     } finally {
-      localStorage.removeItem("access_token");
+      clearAccessToken();
+      clearAuthMergeMarkers();
       dispatch(resetUser());
       setProfileOpen(false);
       message.success("Đã đăng xuất");
@@ -175,93 +206,22 @@ const HeaderComponent = () => {
   const isFlashHash = location.pathname === "/" && activeHash === "#flash-sale";
   const isContactHash = location.pathname === "/" && activeHash === "#contact";
 
-  const hydrateUserFromToken = async (token) => {
-    try {
-      const decoded = jwtDecode(token);
-      if (decoded?.id) {
-        const details = await UserServices.getDetailsUser(decoded.id, token);
-        dispatch(updateUser({ ...details?.data, access_token: token }));
-        return;
-      }
-      dispatch(updateUser({ access_token: token, name: "Tài khoản", isAdmin: Boolean(decoded?.isAdmin) }));
-    } catch (error) {
-      dispatch(updateUser({ access_token: token }));
-    }
-  };
-
-  const mergeGuestCartOnLogin = async (token) => {
-    const localItems = JSON.parse(localStorage.getItem("cartItems") || "[]")
-      .filter((item) => item?.idsp && Number(item?.quantity || 0) > 0);
-    if (!localItems.length) return;
-
-    const serverRes = await CartServices.getMyCart(token);
-    const serverItems = (serverRes?.data?.items || []).map((item) => ({
-      idsp: item.productId,
-      quantity: Number(item.quantity || 1),
-      name: item.name || "",
-      image: item.image || "",
-      price: Number(item.price || 0),
-      discount: Number(item.discount || 0),
-      countInStock: Number(item.countInStock || 0),
-      category: item.category || "Sản phẩm",
-    }));
-
-    const mergedMap = new Map();
-    serverItems.forEach((item) => mergedMap.set(item.idsp, { ...item }));
-    localItems.forEach((item) => {
-      const existed = mergedMap.get(item.idsp);
-      if (!existed) {
-        mergedMap.set(item.idsp, { ...item, quantity: Number(item.quantity || 1) });
-        return;
-      }
-      mergedMap.set(item.idsp, { ...existed, quantity: Number(existed.quantity || 0) + Number(item.quantity || 0) });
-    });
-
-    const mergedItems = Array.from(mergedMap.values()).filter((item) => item?.idsp && Number(item?.quantity || 0) > 0);
-    await CartServices.updateMyCart(
-      {
-        items: mergedItems.map((item) => ({ productId: item.idsp, quantity: Number(item.quantity || 1) })),
-      },
-      token
-    );
-    localStorage.setItem("cartItems", JSON.stringify(mergedItems));
-    window.dispatchEvent(new Event("cart-updated"));
-  };
-
-  const mergeGuestWishlistOnLogin = async (token) => {
-    const localWishlistItems = JSON.parse(localStorage.getItem("wishlistItems") || "[]").filter((item) => item?.idsp);
-    const localIds = [...new Set(localWishlistItems.map((item) => String(item.idsp)))];
-    if (!localIds.length) return;
-
-    const serverRes = await WishlistServices.getMyWishlist(token);
-    const serverIds = (serverRes?.data?.productIds || [])
-      .map((item) => {
-        if (typeof item === "string") return item;
-        return item?._id || item?.id || item?.productId || "";
-      })
-      .filter(Boolean)
-      .map((id) => String(id));
-    const serverSet = new Set(serverIds);
-    const missingIds = localIds.filter((id) => !serverSet.has(id));
-
-    if (missingIds.length) {
-      await Promise.all(missingIds.map((id) => WishlistServices.addWishlistItem(id, token).catch(() => null)));
-    }
-
-    localStorage.setItem("wishlistItems", JSON.stringify(localWishlistItems));
-    window.dispatchEvent(new Event("wishlist-updated"));
-  };
-
   const onLogin = async (values) => {
     setSubmitting(true);
     try {
       const res = await UserServices.loginUser(values);
       const token = res?.access_token;
       if (!token) throw new Error(res?.message || "Đăng nhập thất bại");
-      localStorage.setItem("access_token", JSON.stringify(token));
-      await mergeGuestCartOnLogin(token);
-      await mergeGuestWishlistOnLogin(token);
-      await hydrateUserFromToken(token);
+      setAccessToken(token);
+      const userMarker = buildUserMarker(token);
+      await hydrateUserFromToken(token, (payload) => dispatch(updateUser(payload)));
+      const mergeResults = await Promise.allSettled([
+        mergeGuestCartOnLogin(token, userMarker),
+        mergeGuestWishlistOnLogin(token, userMarker),
+      ]);
+      if (mergeResults.some((result) => result.status === "rejected")) {
+        message.warning("Đăng nhập thành công, nhưng một phần dữ liệu chưa đồng bộ");
+      }
       setAuthOpen(false);
       loginForm.resetFields();
       message.success("Đăng nhập thành công");
@@ -309,6 +269,7 @@ const HeaderComponent = () => {
       <div className="header">
         <div className="container header-main">
           <button
+            ref={menuToggleRef}
             type="button"
             className={`mobile-menu-toggle ${navOpen ? "active" : ""}`}
             aria-expanded={navOpen}
@@ -321,7 +282,6 @@ const HeaderComponent = () => {
               <path d="M4 12h16"></path>
               <path d="M4 17h16"></path>
             </svg>
-            Menu
           </button>
 
           <button type="button" className="logo" onClick={() => navigate("/")}>pet<span>shop</span></button>
@@ -398,7 +358,7 @@ const HeaderComponent = () => {
           </div>
         </div>
 
-        <div className={`nav-wrap ${navOpen ? "open" : "closed"}`}>
+        <div ref={navWrapRef} className={`nav-wrap ${navOpen ? "open" : "closed"}`}>
           <nav id="site-nav" className="container nav">
             <button type="button" className={isFeaturedHash ? "active" : ""} onClick={() => handleNavAction(() => handleNavTarget("featured"))}>
               <span className="nav-icon" aria-hidden="true">
@@ -423,6 +383,12 @@ const HeaderComponent = () => {
             <button type="button" className={isContact || isContactHash ? "active" : ""} onClick={() => handleNavAction(() => navigate("/contact"))}>Liên hệ</button>
           </nav>
         </div>
+        <button
+          type="button"
+          className={`nav-backdrop ${navOpen ? "show" : ""}`}
+          aria-label="Đóng menu điều hướng"
+          onClick={() => setNavOpen(false)}
+        />
       </div>
 
       <Modal

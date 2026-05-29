@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -8,6 +8,7 @@ import * as TypeServices from "../../services/TypeServices";
 import * as CartServices from "../../services/CartServices";
 import * as WishlistServices from "../../services/WishlistServices";
 import { findCatalogNodeBySlugs } from "../../utils/catalogRouting";
+import { readLocalArray } from "../../utils/localStorage";
 import { Breadcrumb, EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
 import "./ProductsPage.css";
 
@@ -78,15 +79,6 @@ const firstImage = (image = "") =>
     .map((item) => item.trim())
     .filter(Boolean)[0] || "";
 
-const readLocalArray = (key) => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    return [];
-  }
-};
-
 const pageTokens = (currentPage, totalPages) => {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -130,6 +122,9 @@ const ProductsPage = () => {
   const [wideKeyword, setWideKeyword] = useState(routeKeyword);
   const [sortBy, setSortBy] = useState("newest");
   const [wishlistIds, setWishlistIds] = useState([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterPanelRef = useRef(null);
+  const filterToggleRef = useRef(null);
 
   const productsQuery = useQuery({
     queryKey: ["products-page", isSearchPage ? routeKeyword : ""],
@@ -422,6 +417,40 @@ const ProductsPage = () => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    const syncFilterState = () => {
+      if (window.innerWidth > 900) setFilterOpen(true);
+      else setFilterOpen(false);
+    };
+    syncFilterState();
+    window.addEventListener("resize", syncFilterState);
+    return () => window.removeEventListener("resize", syncFilterState);
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideFilter = (event) => {
+      if (window.innerWidth > 900 || !filterOpen) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (filterPanelRef.current?.contains(target)) return;
+      if (filterToggleRef.current?.contains(target)) return;
+      setFilterOpen(false);
+    };
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") setFilterOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideFilter);
+    document.addEventListener("touchstart", handleOutsideFilter, { passive: true });
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideFilter);
+      document.removeEventListener("touchstart", handleOutsideFilter);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [filterOpen]);
+
   const currentProducts = useMemo(() => {
     const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
     return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
@@ -572,7 +601,8 @@ const ProductsPage = () => {
     <div className="products-view">
       <main className={`container page ${isSearchPage ? "search-only" : ""}`}>
         {!isSearchPage ? (
-        <aside className="sidebar">
+        <aside ref={filterPanelRef} className={`sidebar ${filterOpen ? "open" : "closed"}`}>
+          <div className="sidebar-scroll">
           <div className="side-head">
             <h2>Bộ lọc</h2>
             <span className="filter-count">{activeFilterCount}</span>
@@ -644,23 +674,17 @@ const ProductsPage = () => {
             </button>
           </div>
 
-          <div className="filter">
-            <div className="filter-title">
-              <PetshopIcon name="truck" size={14} />
-              Tình trạng
-            </div>
-            <label className="check-line">
-              <span className="check active" />
-              Giao hàng tiêu chuẩn
-            </label>
-            <label className="check-line">
-              <span className="check" />
-              Trong ngày
-            </label>
-          </div>
-
           <button type="button" className="clear-btn" onClick={resetFilters}>Xóa bộ lọc</button>
+          </div>
         </aside>
+        ) : null}
+        {!isSearchPage ? (
+          <button
+            type="button"
+            className={`filter-backdrop ${filterOpen ? "show" : ""}`}
+            aria-label="Đóng bộ lọc"
+            onClick={() => setFilterOpen(false)}
+          />
         ) : null}
 
         <section className="content">
@@ -672,13 +696,18 @@ const ProductsPage = () => {
               </div>
               <p>Hiển thị {filteredProducts.length} sản phẩm cho chó, mèo và phụ kiện chăm sóc.</p>
             </div>
-
-            <select className="sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option value="newest">Mới nhất</option>
-              <option value="price-asc">Giá thấp đến cao</option>
-              <option value="price-desc">Giá cao đến thấp</option>
-              <option value="discount">Bán chạy nhất</option>
-            </select>
+            <div className="head-actions">
+              <button ref={filterToggleRef} type="button" className="filter-toggle" onClick={() => setFilterOpen(true)}>
+                <PetshopIcon name="filter" size={14} />
+                Bộ lọc
+              </button>
+              <select className="sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="newest">Mới nhất</option>
+                <option value="price-asc">Giá thấp đến cao</option>
+                <option value="price-desc">Giá cao đến thấp</option>
+                <option value="discount">Bán chạy nhất</option>
+              </select>
+            </div>
           </div>
           ) : null}
 
