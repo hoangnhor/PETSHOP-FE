@@ -20,8 +20,6 @@ export { default as SuccessState } from "./states/SuccessState";
 
 export { default as PetshopModal } from "./feedback/PetshopModal";
 export { default as ConfirmDialog } from "./feedback/ConfirmDialog";
-export { default as BackendStatusBanner } from "./feedback/BackendStatusBanner";
-export { default as BackendStatusDot } from "./feedback/BackendStatusDot";
 export { default as Toast } from "./feedback/Toast";
 
 export { default as PetshopTable } from "./data-display/PetshopTable";
