@@ -32,7 +32,7 @@ const getServiceTag = (service = {}) => {
   if (slug.includes("khach-san")) return "Lưu trú";
   if (slug.includes("kham") || slug.includes("thu-y")) return "Thú y";
   if (slug.includes("groom")) return "Grooming";
-  if (slug.includes("spa")) return "Spa";
+  if (slug.includes("spa") || slug.includes("ve-sinh")) return "Spa";
   return "Dịch vụ";
 };
 

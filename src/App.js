@@ -10,8 +10,10 @@ import * as UserServices from './services/UserServices';
 import { resetUser, updateUser } from './redux/slides/userSlider';
 import { clearAccessToken, getAccessToken, hasAuthSessionMarker, setAccessToken } from './services/authToken';
 import { clearAuthMergeMarkers } from './constants/authSync';
-import { mergeGuestCartOnLogin, mergeGuestWishlistOnLogin } from './services/authMergeServices';
+import { syncAuthAfterLogin } from './services/authMergeServices';
 import ToastProvider from './components/ui/feedback/ToastProvider';
+import { warmupBackend } from './services/backendWarmup';
+import { BackendStatusBanner, BackendStatusDot } from './components/ui';
 
 function ProtectedRoute({ children, isPrivate, isAdminRoute, authReady }) {
   const user = useSelector((state) => state.user);
@@ -45,6 +47,18 @@ function App() {
   const user = useSelector((state) => state.user);
   const [isPending, setIsLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("warming");
+  const BANNER_DISMISS_TTL_MS = 10 * 60 * 1000;
+  const BANNER_DISMISS_KEY = "petshop-backend-banner-dismissed-at";
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try {
+      const raw = window.sessionStorage.getItem(BANNER_DISMISS_KEY);
+      const dismissedAt = Number(raw || 0);
+      return Number.isFinite(dismissedAt) && dismissedAt > 0 && Date.now() - dismissedAt < BANNER_DISMISS_TTL_MS;
+    } catch (error) {
+      return false;
+    }
+  });
 
   const reportMergeError = useCallback((scope, error) => {
     const message = error?.message || `Không thể đồng bộ ${scope}`;
@@ -87,23 +101,37 @@ function App() {
     [dispatch]
   );
 
-  const mergeGuestCartAfterLogin = useCallback(async (token, userMarker) => {
-    try {
-      await mergeGuestCartOnLogin(token, userMarker);
-    } catch (error) {
-      // Giữ dữ liệu local để tránh mất giỏ nếu merge thất bại.
-      reportMergeError('cart', error);
-    }
-  }, [reportMergeError]);
+  useEffect(() => {
+    let isActive = true;
+    const warmup = async () => {
+      setBackendStatus("warming");
+      setBannerDismissed(false);
+      const result = await warmupBackend({ attempts: 6, timeoutMs: 2500, baseDelayMs: 1800 });
+      if (!isActive) return;
+      setBackendStatus(result.ok ? "ready" : "degraded");
+    };
 
-  const mergeGuestWishlistAfterLogin = useCallback(async (token, userMarker) => {
+    void warmup();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleRetryBackend = useCallback(async () => {
+    setBannerDismissed(false);
+    setBackendStatus("warming");
+    const result = await warmupBackend({ attempts: 6, timeoutMs: 2500, baseDelayMs: 1800 });
+    setBackendStatus(result.ok ? "ready" : "degraded");
+  }, []);
+
+  const handleDismissBackendBanner = useCallback(() => {
+    setBannerDismissed(true);
     try {
-      await mergeGuestWishlistOnLogin(token, userMarker);
+      window.sessionStorage.setItem(BANNER_DISMISS_KEY, String(Date.now()));
     } catch (error) {
-      // Giữ local wishlist để tránh mất dữ liệu nếu merge thất bại.
-      reportMergeError('wishlist', error);
+      // Ignore storage failures.
     }
-  }, [reportMergeError]);
+  }, []);
 
   useEffect(() => {
     const bootstrapAuth = async () => {
@@ -123,10 +151,10 @@ function App() {
 
         setAccessToken(token);
         const parsedDecoded = decodeToken(token);
-        const userMarker = parsedDecoded?.id ? String(parsedDecoded.id) : String(parsedDecoded?.email || 'auth-user');
-
-        await mergeGuestCartAfterLogin(token, userMarker);
-        await mergeGuestWishlistAfterLogin(token, userMarker);
+        const syncResult = await syncAuthAfterLogin(token, (payload) => dispatch(updateUser(payload)));
+        if (syncResult.failedCount > 0) {
+          reportMergeError('auth-sync', new Error(`Đồng bộ chưa hoàn tất (${syncResult.failedCount} lỗi)`));
+        }
 
         if (parsedDecoded?.id) {
           await handleGetDetailsUser(parsedDecoded.id, token);
@@ -152,7 +180,7 @@ function App() {
     };
 
     bootstrapAuth();
-  }, [decodeToken, dispatch, handleGetDetailsUser, mergeGuestCartAfterLogin, mergeGuestWishlistAfterLogin]);
+  }, [decodeToken, dispatch, handleGetDetailsUser, reportMergeError]);
 
   useEffect(() => {
     const syncFromTokenEvent = (event) => {
@@ -198,6 +226,20 @@ function App() {
       <AntdApp>
         <ToastProvider />
         <div>
+          {!bannerDismissed && backendStatus !== "ready" ? (
+            <BackendStatusBanner
+              status={backendStatus}
+              onRetry={handleRetryBackend}
+              onDismiss={handleDismissBackendBanner}
+            />
+          ) : null}
+          {bannerDismissed || backendStatus !== "ready" ? (
+            <BackendStatusDot
+              status={backendStatus}
+              onRetry={handleRetryBackend}
+              onShowBanner={() => setBannerDismissed(false)}
+            />
+          ) : null}
           <Loading isPending={isPending}>
             <Router>
               <ScrollToTop />

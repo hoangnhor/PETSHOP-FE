@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { serviceCatalog } from "../../data/serviceCatalog";
 import * as ServiceServices from "../../services/ServiceServices";
-import { PetshopIcon } from "../../components/ui";
+import { EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
 import * as message from "../../components/Message/Message";
 import "./ServicesPage.css";
 
@@ -68,10 +68,46 @@ const ServicesPage = () => {
   });
   const servicesQuery = useQuery({
     queryKey: ["services-page"],
-    queryFn: () => ServiceServices.getAllServices({ limit: 100 }),
+    queryFn: () => ServiceServices.getAllServices({ limit: 4 }),
   });
 
-  const services = serviceCatalog.slice(0, 4);
+  const services = Array.isArray(servicesQuery.data?.data) ? servicesQuery.data.data.slice(0, 4) : [];
+  const resolveServiceImage = (service = {}) => {
+    const localService = serviceCatalog.find((item) => item.slug === service.slug);
+    return service.image || localService?.image || "/service-images/service-spa-thu-cung.jpg";
+  };
+  const resolveServiceDescription = (service = {}) => {
+    const localService = serviceCatalog.find((item) => item.slug === service.slug);
+    return service.shortDescription || service.description || localService?.shortDescription || "";
+  };
+  const resolveServiceTitle = (service = {}) => {
+    const localService = serviceCatalog.find((item) => item.slug === service.slug);
+    return service.title || service.name || localService?.title || "Dịch vụ";
+  };
+  const resolveServicePrice = (service = {}) => {
+    if (service.price === undefined || service.price === null) {
+      const localService = serviceCatalog.find((item) => item.slug === service.slug);
+      return localService?.price || "Liên hệ";
+    }
+    const priceValue = Number(service.salePrice > 0 ? service.salePrice : service.price);
+    if (!Number.isFinite(priceValue) || priceValue <= 0) {
+      const localService = serviceCatalog.find((item) => item.slug === service.slug);
+      return localService?.price || "Liên hệ";
+    }
+    const suffix = String(service.priceLabel || "").includes("/ đêm")
+      ? " / đêm"
+      : String(service.slug || "").includes("khach-san")
+        ? " / đêm"
+        : "";
+    return `Từ ${priceValue.toLocaleString("vi-VN")}đ${suffix}`;
+  };
+  const resolveServiceDuration = (service = {}) => {
+    const localService = serviceCatalog.find((item) => item.slug === service.slug);
+    if (service.durationMin && Number(service.durationMin) > 0) {
+      return `${Number(service.durationMin)} phút`;
+    }
+    return localService?.duration || "Đang cập nhật";
+  };
 
   const handleQuickChange = (event) => {
     const { name, value } = event.target;
@@ -146,37 +182,46 @@ const ServicesPage = () => {
             </button>
           </div>
 
-          <div className="services">
-            {services.map((service, index) => (
-              <article className="service-card" key={service.slug || `${service.title}-${index}`}>
-                <span className="service-tag">Dịch vụ</span>
-                <div className="service-img"><img src={service.image} alt={service.title} /></div>
-                <div className="service-body">
-                  <h3>{service.title}</h3>
-                  <div className="price">{service.price}</div>
-                  <p className="desc">{service.shortDescription}</p>
-                  <p className="note"><PetshopIcon name="clock" size={13} />{service.duration} · Còn slot hôm nay</p>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => {
-                      const params = new URLSearchParams();
-                      const petId = searchParams.get("petId");
-                      const petName = searchParams.get("petName");
-                      const petType = searchParams.get("petType");
-                      if (petId) params.set("petId", petId);
-                      if (petName) params.set("petName", petName);
-                      if (petType) params.set("petType", petType);
-                      navigate(`/services/${service.slug}${params.toString() ? `?${params.toString()}` : ""}`);
-                    }}
-                    disabled={!service.slug}
-                  >
-                    <PetshopIcon name="eye" size={14} />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          {servicesQuery.isLoading && services.length === 0 ? (
+            <LoadingState text="Đang tải danh sách dịch vụ..." />
+          ) : servicesQuery.isError && services.length === 0 ? (
+            <ErrorState message="Không thể tải danh sách dịch vụ." onRetry={() => servicesQuery.refetch()} />
+          ) : services.length === 0 ? (
+            <EmptyState description="Chưa có dịch vụ nào để hiển thị." actionText="Tải lại" onAction={() => servicesQuery.refetch()} />
+          ) : (
+            <div className="services">
+              {services.map((service, index) => (
+                <article className="service-card" key={service.slug || `${service.title}-${index}`}>
+                  <span className="service-tag">Dịch vụ</span>
+                  <div className="service-img"><img src={resolveServiceImage(service)} alt={resolveServiceTitle(service)} /></div>
+                  <div className="service-body">
+                    <h3>{resolveServiceTitle(service)}</h3>
+                    <div className="price">{resolveServicePrice(service)}</div>
+                    <p className="desc">{resolveServiceDescription(service)}</p>
+                    <p className="note"><PetshopIcon name="clock" size={13} />{resolveServiceDuration(service)} · Còn slot hôm nay</p>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        const petId = searchParams.get("petId");
+                        const petName = searchParams.get("petName");
+                        const petType = searchParams.get("petType");
+                        if (petId) params.set("petId", petId);
+                        if (petName) params.set("petName", petName);
+                        if (petType) params.set("petType", petType);
+                        navigate(`/services/${service.slug}${params.toString() ? `?${params.toString()}` : ""}`);
+                      }}
+                      disabled={!service.slug}
+                    >
+                      <PetshopIcon name="eye" size={14} />
+                      <span className="btn-label">Xem chi tiết & đặt lịch</span>
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="booking-wrap">

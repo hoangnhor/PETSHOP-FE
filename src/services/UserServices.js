@@ -9,15 +9,24 @@ axios.defaults.timeout = 15000;
 axios.defaults.withCredentials = true;
 let refreshTokenPromise = null;
 let authFailureHandler = null;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const FORCE_SIGN_OUT_403_MESSAGES = new Set([
     "Tài khoản không được phép truy cập",
     "Xác thực thất bại",
     "Token không được cung cấp",
 ]);
+const FORCE_SIGN_OUT_CODES = new Set([
+    "TOKEN_MISSING",
+    "TOKEN_INVALID",
+    "ACCOUNT_FORBIDDEN",
+    "UNAUTHORIZED",
+]);
 
 const resolveAccessToken = (explicitToken) => explicitToken || getAccessToken();
 const shouldForceSignOut = (error) => {
     const statusCode = Number(error?.response?.status || 0);
+    const code = String(error?.response?.data?.code || "").trim().toUpperCase();
+    if (FORCE_SIGN_OUT_CODES.has(code)) return true;
     if (statusCode === 401) return true;
     if (statusCode !== 403) return false;
     const message = String(error?.response?.data?.message || "").trim();
@@ -38,6 +47,16 @@ export const setAuthFailureHandler = (handler) => {
 const createAuthConfig = (accessToken) => {
     const token = resolveAccessToken(accessToken);
     return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+};
+
+const requestRefreshToken = async () => {
+    const res = await axios.post(`${API_URL}/user/refresh-token`, null, {
+        withCredentials: true,
+    });
+    if (res?.data?.access_token) {
+        setAccessToken(res.data.access_token);
+    }
+    return res.data;
 };
 
 axiosJWT.interceptors.request.use(
@@ -124,22 +143,30 @@ export const getDetailsUser = async (id, access_token) => {
 
 export const refreshToken = async () => {
     if (refreshTokenPromise) return refreshTokenPromise;
-    refreshTokenPromise = axios
-        .post(`${API_URL}/user/refresh-token`, null, {
-            withCredentials: true,
-        })
-        .then((res) => {
-            if (res?.data?.access_token) {
-                setAccessToken(res.data.access_token);
+    refreshTokenPromise = (async () => {
+        const retryDelays = [0, 1200, 2400, 4000];
+        let lastError = null;
+
+        for (let attempt = 0; attempt < retryDelays.length; attempt += 1) {
+            if (retryDelays[attempt] > 0) {
+                await sleep(retryDelays[attempt]);
             }
-            return res.data;
-        })
-        .catch((error) => {
-            throw new Error(getApiErrorMessage(error, 'Phiên đăng nhập đã hết hạn'));
-        })
-        .finally(() => {
-            refreshTokenPromise = null;
-        });
+
+            try {
+                return await requestRefreshToken();
+            } catch (error) {
+                lastError = error;
+                const status = Number(error?.response?.status || 0);
+                if (status && status >= 400 && status < 500 && status !== 502 && status !== 503 && status !== 504) {
+                    throw new Error(getApiErrorMessage(error, 'Phiên đăng nhập đã hết hạn'));
+                }
+            }
+        }
+
+        throw new Error(getApiErrorMessage(lastError, 'Phiên đăng nhập đã hết hạn'));
+    })().finally(() => {
+        refreshTokenPromise = null;
+    });
     return refreshTokenPromise;
 };
 
