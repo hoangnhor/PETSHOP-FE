@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { Tag } from "antd";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import * as BillServices from "../../services/BillServices";
@@ -62,19 +61,27 @@ const AdminOrder = () => {
     }, [ordersQuery.data?.data, statusFilter]);
 
     const columns = [
-        { title: "Mã đơn", dataIndex: "_id", render: (id) => <span>{id?.slice(-8).toUpperCase()}</span> },
-        { title: "Khách hàng", dataIndex: "iduser", render: (customer, record) => <div><div>{customer?.name || record.shippingAddress?.fullName || "-"}</div><div style={{ color: "#777" }}>{customer?.email || record.shippingAddress?.phone || "-"}</div></div> },
-        { title: "Sản phẩm", dataIndex: "items", render: (items) => <div>{items?.slice(0, 2).map((item) => <div key={item._id || item.idsp}>{item.name} x {item.quantity}</div>)}{items?.length > 2 ? <span>+{items.length - 2} sản phẩm</span> : null}</div> },
-        { title: "Tổng tiền", dataIndex: "tongtien", render: (value) => Number(value || 0).toLocaleString("vi-VN") + "đ" },
-        { title: "Thanh toán", render: (_, record) => <div><div>{record.paymentMethod}</div><Tag color={paymentStatusMap[record.paymentStatus]?.color || "default"}>{paymentStatusMap[record.paymentStatus]?.text || record.paymentStatus}</Tag></div> },
-        { title: "Trạng thái", dataIndex: "orderStatus", render: (status) => <Tag color={orderStatusMap[status]?.color || "default"}>{orderStatusMap[status]?.text || status}</Tag> },
-        { title: "Ngày tạo", dataIndex: "createdAt", render: (value) => (value ? new Date(value).toLocaleString("vi-VN") : "") },
+        { title: "Mã đơn", dataIndex: "_id", render: (id) => <span className="admin-order-nowrap">{id?.slice(-8).toUpperCase()}</span> },
+        {
+            title: "Khách hàng",
+            dataIndex: "iduser",
+            render: (customer, record) => (
+                <span className="admin-order-nowrap">
+                    {(customer?.name || record.shippingAddress?.fullName || "-")} - {(customer?.email || record.shippingAddress?.phone || "-")}
+                </span>
+            )
+        },
+        { title: "Sản phẩm", dataIndex: "items", render: (items) => <span className="admin-order-nowrap">{items?.[0] ? `${items[0].name} x ${items[0].quantity}` : "-"}{items?.length > 1 ? ` (+${items.length - 1})` : ""}</span> },
+        { title: "Tổng tiền", dataIndex: "tongtien", render: (value) => <span className="admin-order-nowrap">{Number(value || 0).toLocaleString("vi-VN")}đ</span> },
+        { title: "Thanh toán", render: (_, record) => <span className="admin-order-nowrap">{record.paymentMethod} - {paymentStatusMap[record.paymentStatus]?.text || record.paymentStatus}</span> },
+        { title: "Trạng thái", dataIndex: "orderStatus", render: (status) => <span className="admin-order-nowrap">{orderStatusMap[status]?.text || status}</span> },
+        { title: "Ngày tạo", dataIndex: "createdAt", render: (value) => <span className="admin-order-nowrap">{value ? new Date(value).toLocaleString("vi-VN") : ""}</span> },
         {
             title: "Cập nhật",
             render: (_, record) => (
                 <PetshopSelect
                     value={record.orderStatus}
-                    style={{ width: 150 }}
+                    className="admin-select admin-select--update"
                     options={orderStatusOptions}
                     disabled={record.orderStatus === "cancelled" || updateStatusMutation.isPending}
                     onChange={(orderStatus) => updateStatusMutation.mutate({ id: record._id, orderStatus })}
@@ -92,17 +99,20 @@ const AdminOrder = () => {
     ];
 
     return (
-        <div>
+        <div className="admin-page-section">
             <WrapperHeader className="admin-panel-title">Quản Lý Đơn Hàng</WrapperHeader>
             {ordersQuery.isError ? <ErrorState message="Không thể tải danh sách đơn hàng." onRetry={() => ordersQuery.refetch()} /> : null}
-            <div className="admin-stats-grid">
+            <div className="admin-stats-grid admin-stats-grid--3">
                 <StatsCard label="Đơn hợp lệ" value={rows.length} />
                 <StatsCard label="Chờ xác nhận" value={rows.filter((o) => o.orderStatus === "pending").length} />
                 <StatsCard label="Đang giao" value={rows.filter((o) => o.orderStatus === "shipping").length} />
             </div>
-            <div className="admin-filters">
-                <span>Lọc trạng thái:</span>
-                <PetshopSelect value={statusFilter} onChange={setStatusFilter} style={{ width: 180 }} options={[{ value: "all", label: "Tất cả" }, ...orderStatusOptions]} />
+            <div className="admin-toolbar">
+                <div className="admin-toolbar-left" />
+                <div className="admin-toolbar-end">
+                    <span>Lọc trạng thái:</span>
+                    <PetshopSelect className="admin-select admin-select--filter" value={statusFilter} onChange={setStatusFilter} options={[{ value: "all", label: "Tất cả" }, ...orderStatusOptions]} />
+                </div>
             </div>
             <div className="admin-table-wrap">
                 <PetshopTable

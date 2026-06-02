@@ -104,7 +104,7 @@ const AdminUser = () => {
     ];
 
     return (
-        <div>
+        <div className="admin-page-section">
             <WrapperHeader className="admin-panel-title">Quản Lý Người Dùng</WrapperHeader>
             {usersQuery.isError ? <ErrorState message="Không thể tải danh sách người dùng." onRetry={() => usersQuery.refetch()} /> : null}
             <div className="admin-stats-grid">
@@ -113,10 +113,12 @@ const AdminUser = () => {
                 <StatsCard label="Khách hàng" value={(usersQuery.data?.data || []).filter((u) => !u.isAdmin).length} />
             </div>
             <div className="admin-toolbar">
-                <PetshopButton icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>Thêm người dùng</PetshopButton>
+                <div className="admin-toolbar-left">
+                    <PetshopButton icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>Thêm người dùng</PetshopButton>
+                </div>
                 <div className="admin-toolbar-end">
-                    <PetshopInput placeholder="Tìm theo tên/email" value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ width: 220 }} />
-                    <PetshopSelect value={roleFilter} onChange={setRoleFilter} style={{ width: 160 }} options={[{ value: "all", label: "Tất cả vai trò" }, { value: "admin", label: "Admin" }, { value: "customer", label: "Khách hàng" }]} />
+                    <PetshopInput className="admin-input admin-input--search" placeholder="Tìm theo tên/email" value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+                    <PetshopSelect className="admin-select admin-select--filter" value={roleFilter} onChange={setRoleFilter} options={[{ value: "all", label: "Tất cả vai trò" }, { value: "admin", label: "Admin" }, { value: "customer", label: "Khách hàng" }]} />
                 </div>
             </div>
             <div className="admin-table-wrap">

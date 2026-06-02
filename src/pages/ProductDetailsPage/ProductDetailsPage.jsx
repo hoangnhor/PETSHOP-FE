@@ -581,6 +581,7 @@ const ProductDetailsPage = () => {
                         }}
                       >
                         <PetshopIcon name="cart" size={16} className="petshop-icon" />
+                        <span className="related-btn-label">Thêm vào giỏ</span>
                       </button>
                       <button
                         className="quick-view"

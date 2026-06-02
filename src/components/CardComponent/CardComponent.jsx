@@ -90,7 +90,9 @@ const CardComponent = (props) => {
                         src={image || "https://via.placeholder.com/300"}
                         style={{
                             width: "100%",
-                            height: "auto",
+                            height: 250,
+                            objectFit: "cover",
+                            objectPosition: "center",
                             display: "block",
                             transition: "transform .45s ease",
                         }}

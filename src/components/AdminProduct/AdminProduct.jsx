@@ -91,17 +91,21 @@ const AdminProduct = () => {
   ];
 
   return (
-    <div>
+    <div className="admin-page-section">
       <WrapperHeader className="admin-panel-title">Quản Lý Sản Phẩm</WrapperHeader>
       {hasError ? <ErrorState message="Không thể tải dữ liệu sản phẩm/danh mục." onRetry={() => { productsQuery.refetch(); typesQuery.refetch(); }} /> : null}
-      <div className="admin-stats-grid">
+      <div className="admin-stats-grid admin-stats-grid--3">
         <StatsCard label="Tổng sản phẩm" value={productsQuery.data?.total || (productsQuery.data?.data || []).length} />
         <StatsCard label="Danh mục" value={(typesQuery.data?.data || []).length} />
         <StatsCard label="Sản phẩm hiển thị" value={filteredProducts.length} />
       </div>
-      <div className="admin-toolbar" style={{ justifyContent: "flex-start" }}>
-        <PetshopButton icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue(emptyProduct); setIsCreateOpen(true); }}>Thêm sản phẩm</PetshopButton>
-        <PetshopInput placeholder="Tìm sản phẩm" value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ width: 220 }} />
+      <div className="admin-toolbar">
+        <div className="admin-toolbar-left">
+          <PetshopButton icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue(emptyProduct); setIsCreateOpen(true); }}>Thêm sản phẩm</PetshopButton>
+        </div>
+        <div className="admin-toolbar-end">
+          <PetshopInput className="admin-input admin-input--search" placeholder="Tìm sản phẩm" value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+        </div>
       </div>
 
       <div className="admin-table-wrap">

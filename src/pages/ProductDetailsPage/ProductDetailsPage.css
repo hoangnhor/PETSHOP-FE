@@ -593,7 +593,9 @@
 }
 
 .product-detail-view .quick-view {
-  width: 39px;
+  width: auto;
+  min-width: 39px;
+  padding: 0 10px;
   height: 39px;
   border: 1px solid #eadfce;
   background: #fff;
@@ -604,6 +606,11 @@
   justify-content: center;
   cursor: pointer;
   transition: 0.25s;
+  gap: 8px;
+}
+
+.product-detail-view .related-btn-label {
+  display: inline;
 }
 
 .product-detail-view .quick-view:hover {
@@ -744,6 +751,17 @@
   .product-detail-view .image-wrap {
     height: auto;
     aspect-ratio: 1 / 1;
+  }
+
+  .product-detail-view .related-btn-label {
+    display: none;
+  }
+
+  .product-detail-view .quick-view {
+    width: 39px;
+    min-width: 39px;
+    padding: 0;
+    gap: 0;
   }
 
   .product-detail-view .breadcrumb-pill {

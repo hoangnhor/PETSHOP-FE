@@ -53,8 +53,8 @@ const AdminCategory = () => {
   }, [productsQuery.data?.data]);
 
   return (
-    <div>
-      <WrapperHeader className="admin-panel-title">Quản lý danh mục</WrapperHeader>
+    <div className="admin-page-section">
+      <WrapperHeader className="admin-panel-title">Quản Lý Danh Mục</WrapperHeader>
       {typesQuery.isLoading || productsQuery.isLoading ? <LoadingState text="Đang tải dữ liệu danh mục..." /> : null}
       {typesQuery.isError || productsQuery.isError ? (
         <ErrorState
@@ -71,24 +71,30 @@ const AdminCategory = () => {
         <StatsCard label="Danh mục rỗng" value={(typesQuery.data?.data || []).filter((type) => !countByType[type._id]).length} />
       </div>
 
-      <div className="admin-category-create">
-        <PetshopInput placeholder="Nhập tên danh mục mới" value={name} onChange={(event) => setName(event.target.value)} onPressEnter={() => name.trim() && createTypeMutation.mutate(name.trim())} />
-        <PetshopButton icon={<PlusOutlined />} onClick={() => name.trim() && createTypeMutation.mutate(name.trim())} disabled={createTypeMutation.isPending}>Thêm danh mục</PetshopButton>
+      <div className="admin-toolbar">
+        <div className="admin-toolbar-left">
+          <PetshopButton icon={<PlusOutlined />} onClick={() => name.trim() && createTypeMutation.mutate(name.trim())} disabled={createTypeMutation.isPending}>Thêm danh mục</PetshopButton>
+        </div>
+        <div className="admin-toolbar-end">
+          <PetshopInput className="admin-input admin-input--search" placeholder="Nhập tên danh mục mới" value={name} onChange={(event) => setName(event.target.value)} onPressEnter={() => name.trim() && createTypeMutation.mutate(name.trim())} />
+        </div>
       </div>
 
-      {!(typesQuery.isLoading || productsQuery.isLoading) && (typesQuery.data?.data || []).length === 0 ? (
-        <EmptyState title="Chưa có danh mục" description="Hãy thêm danh mục mới để bắt đầu quản lý sản phẩm." />
-      ) : (
-        <div className="admin-category-grid">
-          {(typesQuery.data?.data || []).map((type) => (
-            <article key={type._id} className="admin-category-card">
-              <h3>{type.name}</h3>
-              <p>{countByType[type._id] || 0} sản phẩm</p>
-              <PetshopButton variant="secondary" onClick={() => setPendingDeleteType(type)}>Xóa</PetshopButton>
-            </article>
-          ))}
-        </div>
-      )}
+      <div className="admin-table-wrap admin-table-wrap--cards">
+        {!(typesQuery.isLoading || productsQuery.isLoading) && (typesQuery.data?.data || []).length === 0 ? (
+          <EmptyState title="Chưa có danh mục" description="Hãy thêm danh mục mới để bắt đầu quản lý sản phẩm." />
+        ) : (
+          <div className="admin-category-grid">
+            {(typesQuery.data?.data || []).map((type) => (
+              <article key={type._id} className="admin-category-card">
+                <h3>{type.name}</h3>
+                <p>{countByType[type._id] || 0} sản phẩm</p>
+                <PetshopButton variant="secondary" onClick={() => setPendingDeleteType(type)}>Xóa</PetshopButton>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={Boolean(pendingDeleteType)}

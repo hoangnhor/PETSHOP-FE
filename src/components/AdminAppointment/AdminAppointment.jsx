@@ -82,7 +82,7 @@ const AdminAppointment = () => {
       render: (_, record) => (
         <PetshopSelect
           value={record.status}
-          style={{ width: 160 }}
+          className="admin-select admin-select--update"
           options={statusOptions}
           disabled={cancelMutation.isPending || updateMutation.isPending}
           onChange={(nextStatus) => updateMutation.mutate({ id: record._id, payload: { status: nextStatus } })}
@@ -104,29 +104,31 @@ const AdminAppointment = () => {
   ];
 
   return (
-    <div>
-      <WrapperHeader className="admin-panel-title">Quản lý lịch hẹn</WrapperHeader>
+    <div className="admin-page-section">
+      <WrapperHeader className="admin-panel-title">Quản Lý Lịch Hẹn</WrapperHeader>
       {appointmentsQuery.isError ? <ErrorState message="Không thể tải danh sách lịch hẹn." onRetry={() => appointmentsQuery.refetch()} /> : null}
-      <div className="admin-stats-grid">
+      <div className="admin-stats-grid admin-stats-grid--3">
         <StatsCard label="Tổng lịch hẹn" value={(appointmentsQuery.data?.data || []).length} />
         <StatsCard label="Chờ xác nhận" value={(appointmentsQuery.data?.data || []).filter((item) => item.status === "pending").length} />
         <StatsCard label="Hoàn tất" value={(appointmentsQuery.data?.data || []).filter((item) => item.status === "completed").length} />
       </div>
-      <div className="admin-filters">
-        <span>Lọc trạng thái:</span>
-        <PetshopSelect value={statusFilter} onChange={setStatusFilter} style={{ width: 180 }} options={[{ value: "all", label: "Tất cả" }, ...statusOptions]} />
+      <div className="admin-toolbar">
+        <div className="admin-toolbar-left" />
+        <div className="admin-toolbar-end">
+          <span>Lọc trạng thái:</span>
+          <PetshopSelect className="admin-select admin-select--filter" value={statusFilter} onChange={setStatusFilter} options={[{ value: "all", label: "Tất cả" }, ...statusOptions]} />
+        </div>
       </div>
 
       {!appointmentsQuery.isLoading && !appointmentsQuery.isError && rows.length === 0 ? (
         <EmptyState description="Chưa có lịch hẹn nào." />
       ) : (
-        <div className="admin-table-wrap">
+        <div className="admin-table-wrap admin-table-wrap--appointment">
           <PetshopTable
             rowKey="_id"
             isPending={appointmentsQuery.isLoading || updateMutation.isPending || cancelMutation.isPending}
             columns={columns}
             data={rows}
-            scroll={{ x: 1200 }}
             pagination={{ pageSize: 10, showSizeChanger: true }}
           />
         </div>

@@ -68,12 +68,14 @@ export const mergeGuestCartOnLogin = async (token, userMarker) => {
     ([productId, qty]) => productId && Number.isInteger(qty) && qty > 0
   );
 
+  let mergeFailedCount = 0;
   if (localEntries.length) {
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       localEntries.map(([productId, quantity]) =>
         CartServices.addCartItem({ productId, quantity }, token)
       )
     );
+    mergeFailedCount = results.filter((result) => result.status === "rejected").length;
   }
 
   const finalServerCart = await CartServices.getMyCart(token);
@@ -88,9 +90,16 @@ export const mergeGuestCartOnLogin = async (token, userMarker) => {
     category: item.category || "Sản phẩm",
   }));
 
+  if (mergeFailedCount > 0 && finalItems.length === 0) {
+    throw new Error("Không thể đồng bộ giỏ hàng, vui lòng thử lại");
+  }
+
   localStorage.setItem("cartItems", JSON.stringify(finalItems));
   localStorage.setItem(CART_MERGE_MARKER, userMarker);
   window.dispatchEvent(new Event("cart-updated"));
+  if (mergeFailedCount > 0) {
+    throw new Error(`Đồng bộ giỏ hàng chưa hoàn tất (${mergeFailedCount} sản phẩm lỗi)`);
+  }
   } finally {
     if (localStorage.getItem(CART_MERGE_LOCK) === userMarker) {
       localStorage.removeItem(CART_MERGE_LOCK);
@@ -137,7 +146,20 @@ export const mergeGuestWishlistOnLogin = async (token, userMarker) => {
     }
   }
 
-  localStorage.setItem("wishlistItems", JSON.stringify(localWishlistItems));
+  const latestServerRes = await WishlistServices.getMyWishlist(token);
+  const latestProducts = Array.isArray(latestServerRes?.data?.products) ? latestServerRes.data.products : [];
+  const nextWishlistLocal = latestProducts.length
+    ? latestProducts.map((item) => ({
+        idsp: String(item?._id || item?.id || item?.productId || ""),
+        name: item?.name || "",
+        image: item?.image || "",
+        price: Number(item?.price || 0),
+        discount: Number(item?.discount || 0),
+        countInStock: Number(item?.countInStock || 0),
+      })).filter((item) => isValidObjectId(item.idsp))
+    : localWishlistItems;
+
+  localStorage.setItem("wishlistItems", JSON.stringify(nextWishlistLocal));
   localStorage.setItem(WISHLIST_MERGE_MARKER, userMarker);
   window.dispatchEvent(new Event("wishlist-updated"));
   } finally {
@@ -145,4 +167,22 @@ export const mergeGuestWishlistOnLogin = async (token, userMarker) => {
       localStorage.removeItem(WISHLIST_MERGE_LOCK);
     }
   }
+};
+
+export const syncAuthAfterLogin = async (token, applyUser) => {
+  if (!token) {
+    throw new Error("Thiếu access token");
+  }
+  const userMarker = buildUserMarker(token);
+  await hydrateUserFromToken(token, applyUser);
+  const mergeResults = await Promise.allSettled([
+    mergeGuestCartOnLogin(token, userMarker),
+    mergeGuestWishlistOnLogin(token, userMarker),
+  ]);
+  const failedCount = mergeResults.filter((result) => result.status === "rejected").length;
+  return {
+    userMarker,
+    failedCount,
+    mergeResults,
+  };
 };

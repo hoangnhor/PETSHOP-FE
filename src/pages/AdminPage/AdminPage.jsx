@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getItem } from "../../utils";
 import { AppstoreOutlined, ProductOutlined, ShoppingCartOutlined, TagsOutlined, UserOutlined } from '@ant-design/icons';
 import { Menu } from "antd";
@@ -20,10 +20,19 @@ const AdminPage = () => {
         getItem('Sản Phẩm', 'product', <ProductOutlined />),
         getItem('Danh Mục', 'category', <TagsOutlined />),
         getItem('Đơn Hàng', 'order', <ShoppingCartOutlined />),
-        getItem('Lịch hẹn', 'appointment', <AppstoreOutlined />),
+        getItem('Lịch Hẹn', 'appointment', <AppstoreOutlined />),
     ];
 
     const [keySelected, setKeySelected] = useState('dashboard');
+
+    useEffect(() => {
+        const contentEl = document.querySelector(".admin-parity .admin-content");
+        if (contentEl && typeof contentEl.scrollTo === "function") {
+            contentEl.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        } else {
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        }
+    }, [keySelected]);
 
     const renderPage = (key) => {
         switch (key) {
@@ -67,7 +76,9 @@ const AdminPage = () => {
                     </AdminSidebar>
                 )}
             >
-                {renderPage(keySelected)}
+                <div className="admin-panel-shell">
+                    {renderPage(keySelected)}
+                </div>
             </AdminLayout>
         </div>
     );

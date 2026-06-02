@@ -12,10 +12,7 @@ import { clearAccessToken, setAccessToken } from "../../services/authToken";
 import { readLocalArray } from "../../utils/localStorage";
 import { clearAuthMergeMarkers } from "../../constants/authSync";
 import {
-  buildUserMarker,
-  hydrateUserFromToken,
-  mergeGuestCartOnLogin,
-  mergeGuestWishlistOnLogin,
+  syncAuthAfterLogin,
 } from "../../services/authMergeServices";
 import "./headerRedesign.css";
 
@@ -213,13 +210,8 @@ const HeaderComponent = () => {
       const token = res?.access_token;
       if (!token) throw new Error(res?.message || "Đăng nhập thất bại");
       setAccessToken(token);
-      const userMarker = buildUserMarker(token);
-      await hydrateUserFromToken(token, (payload) => dispatch(updateUser(payload)));
-      const mergeResults = await Promise.allSettled([
-        mergeGuestCartOnLogin(token, userMarker),
-        mergeGuestWishlistOnLogin(token, userMarker),
-      ]);
-      if (mergeResults.some((result) => result.status === "rejected")) {
+      const syncResult = await syncAuthAfterLogin(token, (payload) => dispatch(updateUser(payload)));
+      if (syncResult.failedCount > 0) {
         message.warning("Đăng nhập thành công, nhưng một phần dữ liệu chưa đồng bộ");
       }
       setAuthOpen(false);

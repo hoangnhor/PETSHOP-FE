@@ -38,26 +38,29 @@ const AdminDashboard = () => {
   const totalRevenue = useMemo(() => deliveredOrders.reduce((sum, order) => sum + Number(order?.tongtien || 0), 0), [deliveredOrders]);
 
   return (
-    <div>
+    <div className="admin-page-section">
       <WrapperHeader className="admin-panel-title">Tổng Quan Quản Trị</WrapperHeader>
-      <div className="admin-filters" style={{ marginBottom: 12 }}>
-        <span>Khoảng thời gian:</span>
-        <PetshopSelect
-          value={period}
-          onChange={setPeriod}
-          style={{ width: 180 }}
-          options={[
-            { value: "7d", label: "7 ngày qua" },
-            { value: "30d", label: "30 ngày qua" },
-            { value: "month", label: "Tháng này" },
-            { value: "all", label: "Toàn thời gian" },
-          ]}
-        />
+      <div className="admin-toolbar">
+        <div className="admin-toolbar-left" />
+        <div className="admin-toolbar-end">
+          <span>Khoảng thời gian:</span>
+          <PetshopSelect
+            className="admin-select admin-select--filter"
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { value: "7d", label: "7 ngày qua" },
+              { value: "30d", label: "30 ngày qua" },
+              { value: "month", label: "Tháng này" },
+              { value: "all", label: "Toàn thời gian" },
+            ]}
+          />
+        </div>
       </div>
       {isLoading ? <LoadingState text="Đang tải dữ liệu tổng quan..." /> : null}
       {hasError ? <ErrorState message="Không thể tải dữ liệu tổng quan." onRetry={() => { usersQuery.refetch(); productsQuery.refetch(); ordersQuery.refetch(); }} /> : null}
       {!isLoading && !hasError ? (
-        <div className="admin-stats-grid">
+        <div className="admin-stats-grid admin-stats-grid--4">
           <StatsCard label="Tổng người dùng" value={(usersQuery.data?.data || []).length} />
           <StatsCard label="Tổng sản phẩm" value={productsQuery.data?.total || (productsQuery.data?.data || []).length} />
           <StatsCard label="Đơn hàng trong kỳ" value={filteredOrders.length} />

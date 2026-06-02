@@ -908,9 +908,14 @@
     gap: 12px;
   }
 
+  .products-view .product-media {
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
   .products-view .product img,
   .products-view .image-placeholder {
-    height: auto;
+    height: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
     object-position: center;

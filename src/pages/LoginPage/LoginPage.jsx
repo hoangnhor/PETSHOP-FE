@@ -6,10 +6,7 @@ import { updateUser } from "../../redux/slides/userSlider";
 import * as message from "../../components/Message/Message";
 import { setAccessToken } from "../../services/authToken";
 import {
-  buildUserMarker,
-  hydrateUserFromToken,
-  mergeGuestCartOnLogin,
-  mergeGuestWishlistOnLogin,
+  syncAuthAfterLogin,
 } from "../../services/authMergeServices";
 import "../AuthPages/AuthPages.css";
 
@@ -40,14 +37,8 @@ const LoginPage = () => {
       const token = res?.access_token;
       if (!token) throw new Error(res?.message || "Đăng nhập thất bại");
       setAccessToken(token);
-      const userMarker = buildUserMarker(token);
-      await hydrateUserFromToken(token, (payload) => dispatch(updateUser(payload)));
-      const mergeResults = await Promise.allSettled([
-        mergeGuestCartOnLogin(token, userMarker),
-        mergeGuestWishlistOnLogin(token, userMarker),
-      ]);
-      const [cartMergeResult, wishlistMergeResult] = mergeResults;
-      if (cartMergeResult.status === "rejected" || wishlistMergeResult.status === "rejected") {
+      const syncResult = await syncAuthAfterLogin(token, (payload) => dispatch(updateUser(payload)));
+      if (syncResult.failedCount > 0) {
         message.warning("Đăng nhập thành công, nhưng một phần dữ liệu chưa đồng bộ");
       }
       message.success("Đăng nhập thành công");

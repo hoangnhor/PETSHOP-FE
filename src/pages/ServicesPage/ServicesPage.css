@@ -309,6 +309,10 @@
   cursor: pointer;
 }
 
+.services-view .btn-label {
+  display: inline;
+}
+
 .services-view .btn:hover {
   background: #8a5c29;
   transform: translateY(-1px);
@@ -584,6 +588,10 @@
   .services-view .btn {
     height: 36px;
     font-size: 12px;
+  }
+
+  .services-view .btn-label {
+    display: none;
   }
 
   .services-view .steps {
