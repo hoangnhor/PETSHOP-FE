@@ -1,13 +1,18 @@
 import { axiosJWT } from "./UserServices";
 import { API_URL } from "./apiConfig";
+import { requestWithCache } from "./apiCache";
 
 const authHeader = (access_token) => ({
     ...(access_token ? { Authorization: `Bearer ${access_token}` } : {}),
 });
 
 export const getAllType = async () => {
-    const res = await axiosJWT.get(`${API_URL}/type/getall`);
-    return res.data;
+    return requestWithCache("type:getall", async () => {
+        const res = await axiosJWT.get(`${API_URL}/type/getall`);
+        return res.data;
+    }, {
+        fallbackMessage: "Không thể tải danh sách danh mục",
+    });
 };
 
 export const createType = async (data, access_token) => {

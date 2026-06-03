@@ -1,13 +1,19 @@
 import { axiosJWT } from "./UserServices";
 import { API_URL } from "./apiConfig";
+import { requestWithCache } from "./apiCache";
 
 const authHeader = (access_token) => ({
     ...(access_token ? { Authorization: `Bearer ${access_token}` } : {}),
 });
 
 export const getAllProduct = async (query = {}) => {
-    const res = await axiosJWT.get(`${API_URL}/product/getall`, { params: query });
-    return res.data;
+    const cacheKey = `product:getall:${JSON.stringify(query)}`;
+    return requestWithCache(cacheKey, async () => {
+        const res = await axiosJWT.get(`${API_URL}/product/getall`, { params: query });
+        return res.data;
+    }, {
+        fallbackMessage: "Không thể tải danh sách sản phẩm",
+    });
 };
 
 export const createProduct = async (data, access_token) => {
@@ -18,13 +24,21 @@ export const createProduct = async (data, access_token) => {
 };
 
 export const getDetailsProduct = async (id) => {
-    const res = await axiosJWT.get(`${API_URL}/product/get-details/${id}`);
-    return res.data;
+    return requestWithCache(`product:details:${id}`, async () => {
+        const res = await axiosJWT.get(`${API_URL}/product/get-details/${id}`);
+        return res.data;
+    }, {
+        fallbackMessage: "Không thể tải thông tin sản phẩm",
+    });
 };
 
 export const searchProduct = async (keyword) => {
-    const res = await axiosJWT.get(`${API_URL}/product/search?keyword=${encodeURIComponent(keyword)}`);
-    return res.data;
+    return requestWithCache(`product:search:${keyword}`, async () => {
+        const res = await axiosJWT.get(`${API_URL}/product/search?keyword=${encodeURIComponent(keyword)}`);
+        return res.data;
+    }, {
+        fallbackMessage: "Không thể tìm kiếm sản phẩm",
+    });
 };
 
 export const updateProduct = async (id, data, access_token) => {

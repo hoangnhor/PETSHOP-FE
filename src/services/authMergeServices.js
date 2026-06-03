@@ -7,9 +7,6 @@ import { CART_MERGE_MARKER, WISHLIST_MERGE_MARKER } from "../constants/authSync"
 
 const CART_MERGE_LOCK = "cart_login_merge_lock";
 const WISHLIST_MERGE_LOCK = "wishlist_login_merge_lock";
-const MONGO_OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-
-const isValidObjectId = (value) => MONGO_OBJECT_ID_REGEX.test(String(value || "").trim());
 
 export const buildUserMarker = (token) => {
   try {
@@ -46,7 +43,7 @@ export const mergeGuestCartOnLogin = async (token, userMarker) => {
       idsp: String(item?.idsp || "").trim(),
       quantity: Number(item?.quantity || 0),
     }))
-    .filter((item) => isValidObjectId(item.idsp) && Number.isInteger(item.quantity) && item.quantity > 0);
+    .filter((item) => Boolean(item.idsp) && Number.isInteger(item.quantity) && item.quantity > 0);
   if (!localItems.length) {
     localStorage.setItem("cartItems", JSON.stringify([]));
     localStorage.setItem(CART_MERGE_MARKER, userMarker);
@@ -70,12 +67,24 @@ export const mergeGuestCartOnLogin = async (token, userMarker) => {
 
   let mergeFailedCount = 0;
   if (localEntries.length) {
-    const results = await Promise.allSettled(
-      localEntries.map(([productId, quantity]) =>
-        CartServices.addCartItem({ productId, quantity }, token)
-      )
-    );
-    mergeFailedCount = results.filter((result) => result.status === "rejected").length;
+    try {
+      await CartServices.updateMyCart(
+        {
+          items: localEntries.map(([productId, quantity]) => ({
+            productId,
+            quantity,
+          })),
+        },
+        token
+      );
+    } catch (error) {
+      const results = await Promise.allSettled(
+        localEntries.map(([productId, quantity]) =>
+          CartServices.addCartItem({ productId, quantity }, token)
+        )
+      );
+      mergeFailedCount = results.filter((result) => result.status === "rejected").length;
+    }
   }
 
   const finalServerCart = await CartServices.getMyCart(token);
@@ -115,7 +124,7 @@ export const mergeGuestWishlistOnLogin = async (token, userMarker) => {
   try {
   const localWishlistItems = readLocalArray("wishlistItems")
     .map((item) => ({ ...item, idsp: String(item?.idsp || "").trim() }))
-    .filter((item) => isValidObjectId(item.idsp));
+    .filter((item) => Boolean(item.idsp));
   const localIds = [...new Set(localWishlistItems.map((item) => item.idsp))];
   if (!localIds.length) {
     localStorage.setItem("wishlistItems", JSON.stringify([]));
@@ -147,16 +156,18 @@ export const mergeGuestWishlistOnLogin = async (token, userMarker) => {
   }
 
   const latestServerRes = await WishlistServices.getMyWishlist(token);
-  const latestProducts = Array.isArray(latestServerRes?.data?.products) ? latestServerRes.data.products : [];
-  const nextWishlistLocal = latestProducts.length
-    ? latestProducts.map((item) => ({
+  const latestWishlistItems = Array.isArray(latestServerRes?.data?.productIds)
+    ? latestServerRes.data.productIds
+    : [];
+  const nextWishlistLocal = latestWishlistItems.length
+    ? latestWishlistItems.map((item) => ({
         idsp: String(item?._id || item?.id || item?.productId || ""),
         name: item?.name || "",
         image: item?.image || "",
         price: Number(item?.price || 0),
         discount: Number(item?.discount || 0),
         countInStock: Number(item?.countInStock || 0),
-      })).filter((item) => isValidObjectId(item.idsp))
+      })).filter((item) => Boolean(item.idsp))
     : localWishlistItems;
 
   localStorage.setItem("wishlistItems", JSON.stringify(nextWishlistLocal));

@@ -1,15 +1,20 @@
 import { axiosJWT } from "./UserServices";
 import { API_URL } from "./apiConfig";
+import { requestWithCache } from "./apiCache";
 
 const authHeader = (access_token) => ({
   ...(access_token ? { Authorization: `Bearer ${access_token}` } : {}),
 });
 
 export const getMyWishlist = async (access_token) => {
-  const res = await axiosJWT.get(`${API_URL}/wishlist/me`, {
-    headers: authHeader(access_token),
+  return requestWithCache(`wishlist:me:${access_token || "public"}`, async () => {
+    const res = await axiosJWT.get(`${API_URL}/wishlist/me`, {
+      headers: authHeader(access_token),
+    });
+    return res.data;
+  }, {
+    fallbackMessage: "Không thể tải danh sách yêu thích",
   });
-  return res.data;
 };
 
 export const addWishlistItem = async (productIdOrPayload, access_token) => {

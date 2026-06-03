@@ -1,15 +1,20 @@
 import { axiosJWT } from "./UserServices";
 import { API_URL } from "./apiConfig";
+import { requestWithCache } from "./apiCache";
 
 const authHeader = (access_token) => ({
   ...(access_token ? { Authorization: `Bearer ${access_token}` } : {}),
 });
 
 export const getMyCart = async (access_token) => {
-  const res = await axiosJWT.get(`${API_URL}/cart/me`, {
-    headers: authHeader(access_token),
+  return requestWithCache(`cart:me:${access_token || "public"}`, async () => {
+    const res = await axiosJWT.get(`${API_URL}/cart/me`, {
+      headers: authHeader(access_token),
+    });
+    return res.data;
+  }, {
+    fallbackMessage: "Không thể tải giỏ hàng",
   });
-  return res.data;
 };
 
 export const updateMyCart = async (data, access_token) => {

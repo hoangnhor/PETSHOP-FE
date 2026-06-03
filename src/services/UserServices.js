@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_URL, getApiErrorMessage } from './apiConfig';
 import { clearAccessToken, getAccessToken, setAccessToken } from './authToken';
+import { readCachedResponse, writeCachedResponse, requestWithCache } from "./apiCache";
 
 export const axiosJWT = axios.create();
 axiosJWT.defaults.timeout = 15000;
@@ -126,17 +127,31 @@ export const SignupUser = async (data) => {
 };
 
 export const getDetailsUser = async (id, access_token) => {
+    const token = resolveAccessToken(access_token);
+    if (!token) {
+        throw new Error('Chưa đăng nhập');
+    }
+
+    const cacheKey = `user:details:${id}:${token}`;
     try {
-        const token = resolveAccessToken(access_token);
-        if (!token) {
-            throw new Error('Chưa đăng nhập');
-        }
         const res = await axiosJWT.get(`${API_URL}/user/get-details/${id}`, createAuthConfig(token));
+        writeCachedResponse(cacheKey, res.data);
         return res.data;
     } catch (error) {
-        if (shouldForceSignOut(error)) {
+        const statusCode = Number(error?.response?.status || 0);
+        const responseMessage = String(error?.response?.data?.message || "").trim();
+        const shouldSignOut =
+            statusCode === 401 ||
+            (statusCode === 403 && FORCE_SIGN_OUT_403_MESSAGES.has(responseMessage));
+
+        if (shouldSignOut) {
             handleAuthFailure('get-details-auth-failed');
+            throw new Error(getApiErrorMessage(error, 'Không thể tải thông tin người dùng'));
         }
+
+        const cached = readCachedResponse(cacheKey);
+        if (cached !== null) return cached;
+
         throw new Error(getApiErrorMessage(error, 'Không thể tải thông tin người dùng'));
     }
 };
@@ -198,11 +213,15 @@ export const createUser = async (data, access_token) => {
 
 export const getAllUser = async (access_token, query = {}) => {
     const token = resolveAccessToken(access_token);
-    const res = await axiosJWT.get(`${API_URL}/user/getall`, {
-        ...createAuthConfig(token),
-        params: query,
+    return requestWithCache(`user:getall:${token}:${JSON.stringify(query)}`, async () => {
+        const res = await axiosJWT.get(`${API_URL}/user/getall`, {
+            ...createAuthConfig(token),
+            params: query,
+        });
+        return res.data;
+    }, {
+        fallbackMessage: 'Không thể tải danh sách người dùng',
     });
-    return res.data;
 };
 
 export const deleteUser = async (id, access_token) => {
