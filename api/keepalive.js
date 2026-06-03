@@ -1,7 +1,3 @@
-export const config = {
-  runtime: "nodejs",
-};
-
 const DEFAULT_TARGET_URL = "https://petshopbe.onrender.com/health";
 
 const getTargetUrl = () => {
@@ -32,42 +28,33 @@ const fetchWithTimeout = async (url, timeoutMs = 10000) => {
   }
 };
 
-export default async function handler() {
+const handler = async (req, res) => {
   const targetUrl = getTargetUrl();
 
   try {
     const response = await fetchWithTimeout(targetUrl, 10000);
     const text = await response.text();
 
-    return Response.json(
-      {
-        ok: response.ok,
-        targetUrl,
-        upstreamStatus: response.status,
-        timestamp: new Date().toISOString(),
-        bodyPreview: text.slice(0, 120),
-      },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    return res.status(200).json({
+      ok: response.ok,
+      targetUrl,
+      upstreamStatus: response.status,
+      timestamp: new Date().toISOString(),
+      bodyPreview: text.slice(0, 120),
+    });
   } catch (error) {
-    return Response.json(
-      {
-        ok: false,
-        targetUrl,
-        error: error?.name === "AbortError" ? "TIMEOUT" : (error?.message || "UNKNOWN_ERROR"),
-        timestamp: new Date().toISOString(),
-      },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    return res.status(200).json({
+      ok: false,
+      targetUrl,
+      error: error?.name === "AbortError" ? "TIMEOUT" : (error?.message || "UNKNOWN_ERROR"),
+      timestamp: new Date().toISOString(),
+    });
   }
-}
+};
+
+module.exports = handler;
+module.exports.config = {
+  runtime: "nodejs",
+};
