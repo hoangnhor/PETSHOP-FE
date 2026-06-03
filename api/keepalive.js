@@ -1,60 +1,38 @@
-const DEFAULT_TARGET_URL = "https://petshopbe.onrender.com/health";
+const DEFAULT_HEALTH_URL = "https://petshopbe.onrender.com/health";
 
-const getTargetUrl = () => {
-  const raw =
-    process.env.RENDER_BE_HEALTH_URL ||
-    process.env.BE_HEALTH_URL ||
-    process.env.BACKEND_HEALTH_URL ||
-    DEFAULT_TARGET_URL;
-  return String(raw || DEFAULT_TARGET_URL).trim();
-};
+function resolveHealthUrl() {
+  const raw = String(process.env.RENDER_HEALTH_URL || "").trim();
+  return raw || DEFAULT_HEALTH_URL;
+}
 
-const fetchWithTimeout = async (url, timeoutMs = 10000) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+export default async function handler(_req, res) {
+  const healthUrl = resolveHealthUrl();
 
   try {
-    return await fetch(url, {
+    const response = await fetch(healthUrl, {
       method: "GET",
-      cache: "no-store",
-      signal: controller.signal,
       headers: {
-        "user-agent": "petshop-vercel-keepalive",
-        "x-keepalive": "1",
+        "user-agent": "vercel-keepalive",
+        accept: "application/json",
       },
     });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
 
-const handler = async (req, res) => {
-  const targetUrl = getTargetUrl();
-
-  try {
-    const response = await fetchWithTimeout(targetUrl, 10000);
     const text = await response.text();
 
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    return res.status(200).json({
+    res.status(200).json({
+      success: true,
+      target: healthUrl,
+      status: response.status,
       ok: response.ok,
-      targetUrl,
-      upstreamStatus: response.status,
-      timestamp: new Date().toISOString(),
-      bodyPreview: text.slice(0, 120),
+      body: text ? text.slice(0, 200) : "",
     });
   } catch (error) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    return res.status(200).json({
-      ok: false,
-      targetUrl,
-      error: error?.name === "AbortError" ? "TIMEOUT" : (error?.message || "UNKNOWN_ERROR"),
-      timestamp: new Date().toISOString(),
+    res.status(502).json({
+      success: false,
+      target: healthUrl,
+      message: error?.message || "Keep-alive ping failed",
     });
   }
-};
-
-module.exports = handler;
-module.exports.config = {
-  runtime: "nodejs",
-};
+}
