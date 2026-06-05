@@ -8,6 +8,7 @@ import * as message from "../../components/Message/Message";
 import Loading from "../../components/LoadingComponent/Loading";
 import PageContainer from "../../components/PageContainer/PageContainer";
 import { readLocalArray } from "../../utils/localStorage";
+import { getOrderDisplayCode } from "../../utils/orderDisplay";
 
 const orderStatusMap = {
     pending: { text: "Chờ xác nhận", color: "gold" },
@@ -139,7 +140,7 @@ const OderPage = () => {
     ];
 
     const orderColumns = [
-        { title: "Mã đơn", dataIndex: "_id", render: (id) => <span>{id?.slice(-8).toUpperCase()}</span> },
+        { title: "Mã đơn", dataIndex: "_id", render: (_, record) => <span>{getOrderDisplayCode(record)}</span> },
         { title: "Tổng tiền", dataIndex: "tongtien", render: (value) => Number(value || 0).toLocaleString("vi-VN") + "đ" },
         { title: "Thanh toán", dataIndex: "paymentMethod" },
         {

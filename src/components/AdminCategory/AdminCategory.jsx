@@ -15,7 +15,7 @@ const AdminCategory = () => {
   const [pendingDeleteType, setPendingDeleteType] = useState(null);
 
   const typesQuery = useQuery({ queryKey: ["types"], queryFn: TypeServices.getAllType });
-  const productsQuery = useQuery({ queryKey: ["products-admin-categories"], queryFn: () => ProductServices.getAllProduct({ limit: 500 }) });
+  const productsQuery = useQuery({ queryKey: ["products-admin-categories"], queryFn: () => ProductServices.getAllProductsUnlimited() });
 
   const refreshTypes = () => queryClient.invalidateQueries({ queryKey: ["types"] });
 

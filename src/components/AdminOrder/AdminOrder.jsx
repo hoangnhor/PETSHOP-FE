@@ -6,6 +6,7 @@ import * as message from "../Message/Message";
 import { WrapperHeader } from "../AdminProduct/style";
 import { ConfirmDialog, ErrorState, PetshopButton, PetshopSelect, PetshopTable, StatsCard } from "../ui";
 import DrawerComponent from "../../DrawerComponent/DrawerComponent";
+import { getOrderDisplayCode } from "../../utils/orderDisplay";
 
 const orderStatusOptions = [
     { value: "pending", label: "Chờ xác nhận" },
@@ -61,7 +62,7 @@ const AdminOrder = () => {
     }, [ordersQuery.data?.data, statusFilter]);
 
     const columns = [
-        { title: "Mã đơn", dataIndex: "_id", render: (id) => <span className="admin-order-nowrap">{id?.slice(-8).toUpperCase()}</span> },
+        { title: "Mã đơn", dataIndex: "_id", render: (_, record) => <span className="admin-order-nowrap">{getOrderDisplayCode(record)}</span> },
         {
             title: "Khách hàng",
             dataIndex: "iduser",
@@ -143,7 +144,7 @@ const AdminOrder = () => {
             <ConfirmDialog
                 open={Boolean(pendingDeleteOrder)}
                 title="Xóa đơn hàng"
-                content={`Bạn có chắc chắn muốn xóa đơn ${pendingDeleteOrder?._id?.slice(-8)?.toUpperCase() || ""}?`}
+                content={`Bạn có chắc chắn muốn xóa đơn ${getOrderDisplayCode(pendingDeleteOrder)}?`}
                 confirmLoading={deleteOrderMutation.isPending}
                 onCancel={() => setPendingDeleteOrder(null)}
                 onOk={() => {
@@ -153,7 +154,7 @@ const AdminOrder = () => {
                 }}
             />
 
-            <DrawerComponent title={`Chi tiết đơn #${selectedOrder?._id?.slice(-8)?.toUpperCase() || ""}`} isOpen={Boolean(selectedOrder)} onClose={() => setSelectedOrder(null)} width="45%">
+            <DrawerComponent title={`Chi tiết đơn ${getOrderDisplayCode(selectedOrder)}`} isOpen={Boolean(selectedOrder)} onClose={() => setSelectedOrder(null)} width="45%">
                 {selectedOrder ? (
                     <div className="admin-order-detail">
                         <div className="admin-order-detail-grid">

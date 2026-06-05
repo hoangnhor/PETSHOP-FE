@@ -11,7 +11,7 @@ const AdminDashboard = () => {
   const user = useSelector((state) => state.user);
   const [period, setPeriod] = useState("30d");
   const usersQuery = useQuery({ queryKey: ["admin-users", user.access_token], queryFn: () => UserServices.getAllUser(user.access_token), enabled: Boolean(user.access_token) });
-  const productsQuery = useQuery({ queryKey: ["products-admin-dashboard"], queryFn: () => ProductServices.getAllProduct({ limit: 500 }) });
+  const productsQuery = useQuery({ queryKey: ["products-admin-dashboard"], queryFn: () => ProductServices.getAllProductsUnlimited() });
   const ordersQuery = useQuery({ queryKey: ["admin-orders", user.access_token], queryFn: () => BillServices.getAllBill(user.access_token, { limit: 500 }), enabled: Boolean(user.access_token) });
 
   const hasError = usersQuery.isError || productsQuery.isError || ordersQuery.isError;

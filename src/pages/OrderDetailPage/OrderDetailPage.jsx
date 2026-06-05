@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import * as BillServices from "../../services/BillServices";
 import { EmptyState, ErrorState, LoadingState } from "../../components/ui";
+import { getOrderDisplayCode } from "../../utils/orderDisplay";
 import "./OrderDetailPage.css";
 
 const statusTextMap = {
@@ -77,7 +78,7 @@ const OrderDetailPage = () => {
         {order ? (
           <section className="detail-grid">
             <div className="card">
-              <h2>Đơn hàng #{order?._id?.slice(-8).toUpperCase()}</h2>
+              <h2>Đơn hàng {getOrderDisplayCode(order)}</h2>
               <span className="status">
                 <svg className="icon-sm" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="9"></circle>

@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import * as BillServices from "../../services/BillServices";
 import { EmptyState, ErrorState, LoadingState, PetshopIcon } from "../../components/ui";
+import { getOrderDisplayCode } from "../../utils/orderDisplay";
 import "./OrderHistoryPage.css";
 
 const statusTextMap = {
@@ -173,7 +174,7 @@ const OrderHistoryPage = () => {
                             <path d="M9 11h6"></path>
                             <path d="M9 15h4"></path>
                           </svg>
-                          #{order?._id?.slice(-8).toUpperCase()}
+                          {getOrderDisplayCode(order)}
                         </div>
                       </td>
                       <td>{formatMoney(getOrderTotal(order))}</td>
